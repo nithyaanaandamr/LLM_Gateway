@@ -11,8 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-001 | Repo skeleton and docs | 0 | Folder structure, docs, ADRs, board and PITFALLS.md in place |
-| GW-002 | Decide ADRs 0002–0009 | 0 | Each ADR marked Accepted or Rejected |
 
 ## Ready
 
@@ -30,9 +28,12 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-007 | Fake provider server | 0 | Streaming + non-streaming; configurable delay, error, disconnect |
 | GW-009 | Research Redis failure handling | 2 | Findings recorded in a new ADR superseding 0008 |
 | GW-010 | Finalise roadmap and Phase 1 tasks | 0 | Roadmap no longer draft; Phase 1 tasks on board |
+| GW-011 | Evaluate a bot to move tasks to Done on merge | Later | Decision recorded; must work with protected `main` |
 
 ## Done
 
 | ID | Task | Phase | Completed |
 |---|---|---|---|
+| GW-001 | Repo skeleton and docs | 0 | 2026-10-22 |
+| GW-002 | Decide ADRs 0002–0009 | 0 | 2026-10-22 |
 | GW-008 | Protect `main`: repo made public, branch protection applied | 0 | 2026-10-21 |

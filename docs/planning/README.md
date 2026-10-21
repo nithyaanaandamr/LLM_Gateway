@@ -33,6 +33,7 @@ Backlog → Ready → In progress → In review → Done
 
 Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`.
 
-## Rule
+## Rules
 
-The PR that changes code also moves its task on the board.
+- The PR that changes code also moves its task on the board.
+- **Moving to Done:** the last commit before merging moves the task to Done (with the date). That change reaches `main` only through the merge, so the board on `main` is always accurate. If the PR is closed unmerged, the change is discarded with it.

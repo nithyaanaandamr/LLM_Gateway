@@ -36,4 +36,7 @@ Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`.
 ## Rules
 
 - The PR that changes code also moves its task on the board.
-- **Moving to Done:** the last commit before merging moves the task to Done (with the date). That change reaches `main` only through the merge, so the board on `main` is always accurate. If the PR is closed unmerged, the change is discarded with it.
+- **Moving to Done is automatic** ([ADR 0010](../decisions/0010-board-sync-bot.md)). After a PR merges, the board bot moves every `GW-###` in its title to Done and marks it Done in the sprint file. It collects these in one rolling PR (`bot/board-sync`) that you review and merge. Merge it before closing a sprint.
+- **PR titles** list every task the PR completes: `GW-003, GW-004: summary`.
+- **Review label:** a PR merges only with the `reviewed by nrk` label (required check `review-label`). Add it after reviewing. If commits land after labelling, remove and re-add it.
+- **Branch names** are settled at the first push; rename the local branch freely before that.

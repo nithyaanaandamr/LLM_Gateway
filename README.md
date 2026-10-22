@@ -25,6 +25,7 @@ packages/
   db/            Drizzle schema and migrations
 tools/
   fake-provider/ Fake LLM provider for tests (no real spend)
+  board-bot/     Moves merged tasks to Done on the board
 tests/
   e2e/           Playwright: functional, visual, accessibility
   load/          k6 load tests

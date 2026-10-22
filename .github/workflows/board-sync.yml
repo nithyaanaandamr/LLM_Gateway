@@ -1,0 +1,79 @@
+# After a PR merges, move its tasks to Done on a rolling bot PR.
+# A human reviews and merges that PR. See ADR 0010 and PITFALLS.md: board bot.
+name: Board sync
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Runs share one branch, so one at a time
+concurrency:
+  group: board-sync
+  cancel-in-progress: false
+
+env:
+  BRANCH: bot/board-sync
+  TIMEZONE: Asia/Kolkata
+
+jobs:
+  sync:
+    # Skip closed-unmerged PRs and the bot's own PR (no loop)
+    if: github.event.pull_request.merged && !startsWith(github.event.pull_request.head.ref, 'bot/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Switch to sync branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          open_pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -n "$open_pr" ]; then
+            # Add to the open sync PR, catching up with main first
+            git switch "$BRANCH"
+            git merge --no-edit origin/main
+          else
+            # Previous sync PR merged or none yet: start fresh from main
+            git switch -C "$BRANCH" origin/main
+          fi
+
+      - name: Move tasks to Done
+        id: board
+        env:
+          # Passed via env, never inlined in the script (shell injection)
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+        run: |
+          date=$(TZ="$TIMEZONE" date -d "$MERGED_AT" +%F)
+          node tools/board-bot/src/main.ts --title "$PR_TITLE" --date "$date"
+
+      - name: Commit and open or update sync PR
+        if: steps.board.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IDS: ${{ steps.board.outputs.ids }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          git commit -am "docs(${IDS}): move to Done after #${PR_NUMBER}"
+          git push --force-with-lease origin "$BRANCH"
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            gh pr create --base main --head "$BRANCH" \
+              --title "Board sync: move merged tasks to Done" \
+              --body "Automated by \`.github/workflows/board-sync.yml\`. One commit per merged PR.
+
+          Review, add the \`reviewed by nrk\` label, then merge. If the bot adds commits after you label, remove and re-add the label."
+          fi

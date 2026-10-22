@@ -97,3 +97,14 @@ ESLint uses typescript-eslint's type-checked rules. They catch bugs plain lint m
 ## Prettier skips Markdown
 
 Prettier pads Markdown tables, which rewrites every doc on each edit. Docs are hand-formatted; `.prettierignore` excludes `*.md`.
+
+## Node runs TypeScript directly
+
+Node 24 strips types and runs `.ts` files with no build step (used by `tools/board-bot`). Limits: imports need the `.ts` extension, and only "erasable" syntax works (no `enum`, no `namespace`, no constructor parameter properties). `erasableSyntaxOnly` in the package's tsconfig makes `tsc` flag these.
+
+## Board bot
+
+- **Bot PRs trigger no workflows.** GitHub doesn't start workflows from events caused by a workflow's built-in token (prevents loops). So the `review-label` check runs on a bot PR only when *you* label it. Once CI (GW-006) is a required check, it will never run on bot PRs and they can't merge. Fix then: a GitHub App token for the bot.
+- **Your merge of the sync PR does trigger workflows.** The bot skips PRs from `bot/` branches, or it would loop.
+- **Rapid merges.** Runs queue one at a time; GitHub keeps only the newest waiting run. If 3+ PRs merge within a minute, one sync can be cancelled. Re-run it from the Actions tab.
+- **PR titles are untrusted input.** The workflow passes them via `env`, never `${{ }}` inside `run:`, which would let a title run shell commands.

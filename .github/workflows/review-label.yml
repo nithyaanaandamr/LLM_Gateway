@@ -1,0 +1,22 @@
+# Required check on main: a PR merges only once it carries the review label.
+name: Review label
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+    branches: [main]
+
+permissions: {}
+
+env:
+  LABEL: reviewed by nrk
+
+jobs:
+  review-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require review label
+        if: ${{ !contains(github.event.pull_request.labels.*.name, env.LABEL) }}
+        run: |
+          echo "::error::Add the '$LABEL' label once the PR is reviewed."
+          exit 1

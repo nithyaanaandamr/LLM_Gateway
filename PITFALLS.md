@@ -72,11 +72,9 @@ GitHub Free does not support branch protection or rulesets on private repos. Opt
 
 Node 24 ships corepack; Node 25+ does not. When moving past Node 24, install it first (`npm i -g corepack`, then `corepack enable`), or `pnpm` stops being found.
 
-## OrbStack has no `/var/run/docker.sock` by default
+## OrbStack socket
 
-OrbStack's socket lives at `~/.orbstack/run/docker.sock`. The `docker` CLI finds it through the `orbstack` context, but tools that skip contexts (e.g. Testcontainers) look for `/var/run/docker.sock` and fail. Fix one of two ways:
-- OrbStack Settings → System → enable admin privileges (creates the `/var/run` link), or
-- set `DOCKER_HOST=unix://$HOME/.orbstack/run/docker.sock`.
+Without admin privileges, OrbStack doesn't create `/var/run/docker.sock`. The `docker` CLI still works, but Testcontainers looks there by default and can't find Docker. Setup step in the README.
 
 ## OrbStack licence
 

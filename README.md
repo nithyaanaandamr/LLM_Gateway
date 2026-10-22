@@ -46,7 +46,7 @@ Not runnable yet. Tooling is set up in Phase 0 (see board tasks GW-003 to GW-005
 |---|---|---|
 | Node | 24 (pinned in `.nvmrc`) | `brew install fnm`, then `fnm install` in the repo |
 | pnpm | 12 (pinned in `package.json` `packageManager`) | `corepack enable` (comes with Node 24) |
-| Docker runtime | OrbStack 2.2 (Docker Engine 29, Compose 5) | `brew install --cask orbstack`, then open the app once |
+| Docker runtime | OrbStack 2.2 (Docker Engine 29, Compose 5) | `brew install --cask orbstack`, open the app once, then Settings → System → enable admin privileges (see PITFALLS.md: OrbStack socket) |
 
 Add fnm to your shell (`~/.zshrc`):
 

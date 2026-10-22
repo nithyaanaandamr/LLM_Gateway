@@ -11,17 +11,18 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-022 | Close Sprint 01, start Sprint 02 | 0 | Sprint 01 dates and retro filled; Sprint 02 file with scope and open topics; retro actions recorded |
 
 ## Ready
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-012 | Data model spec | 1 | Doc lists tables, columns, relations for users, projects, provider keys, gateway keys; one provider key per project; reviewed |
 
 ## Backlog
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-012 | Data model spec | 1 | Doc lists tables, columns, relations for users, projects, provider keys, gateway keys; one provider key per project; reviewed |
 | GW-013 | DB package: Drizzle + Testcontainers | 1 | `packages/db` connects to Postgres; tests spin up a throwaway Postgres; migrations run in tests |
 | GW-014 | App schema and migrations | 1 | Tables from GW-012 exist via migration; log tables in separate `logs` schema (ADR 0007) |
 | GW-015 | Crypto and key helpers in `shared` | 1 | Encrypt/decrypt provider keys; generate `gw_live_…` keys; hash for lookup; unit tested |

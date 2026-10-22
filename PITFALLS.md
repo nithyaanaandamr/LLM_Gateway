@@ -115,3 +115,7 @@ Node 24 strips types and runs `.ts` files with no build step (used by `tools/boa
 - **Root is excluded from the filter.** Docs changes belong to the root package, and root's `lint` script is `pnpm -r lint`, so matching root would quietly check everything.
 - **Diff base is the merge commit's parent.** A PR run checks out GitHub's merge of the PR into `main`. Its first parent (`HEAD^1`) is `main`, so the diff is exactly the PR's changes.
 - **Bot PRs need one click.** CI on a bot PR waits for approval (see Board bot). Approve it before merging.
+
+## Sprint file tables
+
+The board bot marks a row Done if its first cell is a task ID (`| GW-### |`), in any table of a sprint file. Only Scope rows may start with an ID. Open topics rows start with the topic name; put task IDs in the Link column.

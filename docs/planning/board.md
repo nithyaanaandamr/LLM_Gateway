@@ -11,8 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-006 | CI workflow | 0 | Format check, lint, typecheck and test run on every PR, only for affected packages (all packages when root config changes) |
-| GW-010 | Finalise roadmap and Phase 1 tasks | 0 | Roadmap no longer draft; Phase 1 tasks on board |
 
 ## Ready
 
@@ -47,3 +45,5 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-004 | Root tooling: TypeScript, ESLint, Prettier, Vitest | 0 | 2026-10-22 |
 | GW-005 | Local infra running | 0 | 2026-10-22 |
 | GW-011 | Board sync bot and review label gate | 0 | 2026-10-22 |
+| GW-006 | CI workflow | 0 | 2026-10-22 |
+| GW-010 | Finalise roadmap and Phase 1 tasks | 0 | 2026-10-22 |

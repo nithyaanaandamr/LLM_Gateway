@@ -13,7 +13,7 @@ GW-###: <title>
 ## Checklist
 
 - [ ] Board updated (`docs/planning/board.md`)
-- [ ] Board: task moved to Done (last commit before merge)
+- [ ] PR title lists every task ID it completes (the board bot moves them to Done)
 - [ ] Tests added or updated
 - [ ] No secrets, no prompt content in logs
 - [ ] ADR added if a significant decision was made

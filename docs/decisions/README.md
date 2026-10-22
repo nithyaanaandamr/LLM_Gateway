@@ -16,3 +16,4 @@ Statuses: `Open` (researching) → `Proposed` (recommendation, awaiting decision
 | [0007](0007-log-store-separation.md) | Separate log store behind an interface | Accepted |
 | [0008](0008-redis-failure-mode.md) | Redis failure handling: configurable, default closed | Accepted |
 | [0009](0009-hosting-path.md) | Hosting path and infra-as-code | Accepted |
+| [0010](0010-board-sync-bot.md) | Board sync bot and review label gate | Accepted |

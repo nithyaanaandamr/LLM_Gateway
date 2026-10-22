@@ -11,6 +11,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-011 | Board sync bot and review label gate | 0 | On merge, bot moves the PR's tasks to Done (board + sprint) in a rolling PR; PRs need the `reviewed by nrk` label to merge; ADR recorded |
 
 ## Ready
 
@@ -25,7 +26,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-006 | CI workflow | 0 | Lint, typecheck and test run on every PR, only for affected apps |
 | GW-007 | Fake provider server | 0 | Streaming + non-streaming; configurable delay, error, disconnect |
 | GW-009 | Research Redis failure handling | 2 | Findings recorded in a new ADR superseding 0008 |
-| GW-011 | Evaluate a bot to move tasks to Done on merge | Later | Decision recorded; must work with protected `main` |
 
 ## Done
 

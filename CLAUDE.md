@@ -10,7 +10,7 @@ LLM Gateway: a BYOK proxy with key management, rate limits, budget caps, usage t
 
 ## Workflow
 - Every change belongs to a board task `GW-###`. Follow [docs/planning/README.md](docs/planning/README.md).
-- Update the board in the same PR as the change.
+- Update the board in the same PR as the change. Done is set by the board bot after merge ([ADR 0010](docs/decisions/0010-board-sync-bot.md)).
 - Significant decisions get an ADR in `docs/decisions/`.
 
 ## Rules

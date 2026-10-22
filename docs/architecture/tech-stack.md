@@ -46,6 +46,14 @@ All choices are **Accepted**; linked ADRs explain why.
 | Playwright | E2E, visual regression, a11y (with axe) | Accepted |
 | k6 | Load test, p95 overhead | Accepted |
 
+## Local dev
+
+| Tech | Role | Why | Main alternatives | Status |
+|---|---|---|---|---|
+| fnm | Node version manager | Fast; reads `.nvmrc` and switches on `cd` | nvm, Volta, Homebrew `node@24` | Accepted |
+| pnpm via corepack | Package manager | Version pinned in `package.json`, same for everyone | npm, Yarn | Accepted |
+| OrbStack | Local Docker runtime (macOS) | Light on memory and battery, fast start; free for personal use | Docker Desktop, Colima | Accepted |
+
 ## Deploy
 
 | Tech | Role | Status |

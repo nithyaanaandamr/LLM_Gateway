@@ -6,6 +6,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-003 | Install toolchain | 0 | Node 24, pnpm (via corepack), Docker runtime (OrbStack) installed; versions noted in README |
 
 ## In review
 
@@ -16,7 +17,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-003 | Install toolchain | 0 | Node 24, pnpm (via corepack), Docker runtime installed; versions noted in README |
 
 ## Backlog
 

@@ -39,3 +39,27 @@ Start at [docs/README.md](docs/README.md).
 ## Local setup
 
 Not runnable yet. Tooling is set up in Phase 0 (see board tasks GW-003 to GW-005).
+
+### Prerequisites (macOS)
+
+| Tool | Version | Install |
+|---|---|---|
+| Node | 24 (pinned in `.nvmrc`) | `brew install fnm`, then `fnm install` in the repo |
+| pnpm | 12 (pinned in `package.json` `packageManager`) | `corepack enable` (comes with Node 24) |
+| Docker runtime | OrbStack 2.2 (Docker Engine 29, Compose 5) | `brew install --cask orbstack`, then open the app once |
+
+Add fnm to your shell (`~/.zshrc`):
+
+```sh
+eval "$(fnm env --use-on-cd --version-file-strategy=recursive --shell zsh)"
+```
+
+Check:
+
+```sh
+node -v            # v24.x
+pnpm -v            # 12.x
+docker version     # client and server both listed
+```
+
+Versions last checked: 2026-10-22 (Node 24.22.1, pnpm 12.14.0, OrbStack 2.2.4, Docker 29.8.2, Compose 5.5.0).

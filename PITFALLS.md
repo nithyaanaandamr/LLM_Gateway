@@ -67,3 +67,17 @@ App Runner is built for HTTP services. The worker has no HTTP endpoint, so it fi
 ## Branch protection on private repos
 
 GitHub Free does not support branch protection or rulesets on private repos. Options: GitHub Pro, a public repo, or a local hook that blocks pushes to `main` (soft guard only).
+
+## Corepack leaves Node after v24
+
+Node 24 ships corepack; Node 25+ does not. When moving past Node 24, install it first (`npm i -g corepack`, then `corepack enable`), or `pnpm` stops being found.
+
+## OrbStack has no `/var/run/docker.sock` by default
+
+OrbStack's socket lives at `~/.orbstack/run/docker.sock`. The `docker` CLI finds it through the `orbstack` context, but tools that skip contexts (e.g. Testcontainers) look for `/var/run/docker.sock` and fail. Fix one of two ways:
+- OrbStack Settings → System → enable admin privileges (creates the `/var/run` link), or
+- set `DOCKER_HOST=unix://$HOME/.orbstack/run/docker.sock`.
+
+## OrbStack licence
+
+Free for personal, non-commercial use. Commercial use needs a paid licence. Fine for this project; check again if that changes.

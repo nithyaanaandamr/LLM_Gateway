@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-022 | Close Sprint 01, start Sprint 02 | 0 | Sprint 01 dates and retro filled; Sprint 02 file with scope and open topics; retro actions recorded |
 
 ## Ready
 
@@ -48,3 +47,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-011 | Board sync bot and review label gate | 0 | 2026-10-22 |
 | GW-006 | CI workflow | 0 | 2026-10-22 |
 | GW-010 | Finalise roadmap and Phase 1 tasks | 0 | 2026-10-22 |
+| GW-022 | Close Sprint 01, start Sprint 02 | 0 | 2026-10-22 |

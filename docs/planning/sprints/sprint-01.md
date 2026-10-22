@@ -16,7 +16,7 @@
 | GW-008 | Protect `main` | Done |
 | GW-010 | Finalise roadmap and Phase 1 tasks | Done |
 | GW-011 | Board sync bot and review label gate | Done |
-| GW-022 | Close Sprint 01, start Sprint 02 | Open |
+| GW-022 | Close Sprint 01, start Sprint 02 | Done |
 
 Status is `Open` or `Done`. The board bot sets `Done` after merge.
 

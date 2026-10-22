@@ -104,7 +104,7 @@ Node 24 strips types and runs `.ts` files with no build step (used by `tools/boa
 
 ## Board bot
 
-- **Bot PRs trigger no workflows.** GitHub doesn't start workflows from events caused by a workflow's built-in token (prevents loops). So the `review-label` check runs on a bot PR only when *you* label it. Once CI (GW-006) is a required check, it will never run on bot PRs and they can't merge. Fix then: a GitHub App token for the bot.
+- **Bot PRs wait for approval.** When the built-in token opens or updates a PR, GitHub creates its workflow runs but holds them as `action_required` (prevents loops). Click "Approve workflows to run" on the PR, and its checks (CI, `review-label`) run. Seen on PR #4. If that click becomes a chore, a GitHub App token for the bot removes it.
 - **Your merge of the sync PR does trigger workflows.** The bot skips PRs from `bot/` branches, or it would loop.
 - **Rapid merges.** Runs queue one at a time; GitHub keeps only the newest waiting run. If 3+ PRs merge within a minute, one sync can be cancelled. Re-run it from the Actions tab.
 - **PR titles are untrusted input.** The workflow passes them via `env`, never `${{ }}` inside `run:`, which would let a title run shell commands.
@@ -114,4 +114,4 @@ Node 24 strips types and runs `.ts` files with no build step (used by `tools/boa
 - **Root changes run everything.** pnpm's `[ref]` filter only sees which package folders changed. A change to root config (`tsconfig.base.json`, `eslint.config.js`, the lockfile, a workflow) affects every package but belongs to none, so CI checks all packages then.
 - **Root is excluded from the filter.** Docs changes belong to the root package, and root's `lint` script is `pnpm -r lint`, so matching root would quietly check everything.
 - **Diff base is the merge commit's parent.** A PR run checks out GitHub's merge of the PR into `main`. Its first parent (`HEAD^1`) is `main`, so the diff is exactly the PR's changes.
-- **CI is not a required check yet.** Bot PRs trigger no workflows (see Board bot), so a required CI check would block them forever.
+- **Bot PRs need one click.** CI on a bot PR waits for approval (see Board bot). Approve it before merging.

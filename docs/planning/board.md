@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-011 | Board sync bot and review label gate | 0 | On merge, bot moves the PR's tasks to Done (board + sprint) in a rolling PR; PRs need the `reviewed by nrk` label to merge; ADR recorded |
 
 ## Ready
 
@@ -37,3 +36,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-003 | Install toolchain (Node 24, pnpm 12, OrbStack) | 0 | 2026-10-22 |
 | GW-004 | Root tooling: TypeScript, ESLint, Prettier, Vitest | 0 | 2026-10-22 |
 | GW-005 | Local infra running | 0 | 2026-10-22 |
+| GW-011 | Board sync bot and review label gate | 0 | 2026-10-22 |

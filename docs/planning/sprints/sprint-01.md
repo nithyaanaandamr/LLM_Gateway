@@ -14,7 +14,7 @@
 | GW-005 | Local infra running | Done |
 | GW-008 | Protect `main` | Done |
 | GW-010 | Finalise roadmap and Phase 1 tasks | Open |
-| GW-011 | Board sync bot and review label gate | Open |
+| GW-011 | Board sync bot and review label gate | Done |
 
 Status is `Open` or `Done`. The board bot sets `Done` after merge.
 

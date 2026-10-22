@@ -12,6 +12,14 @@ LLM Gateway: a BYOK proxy with key management, rate limits, budget caps, usage t
 - Every change belongs to a board task `GW-###`. Follow [docs/planning/README.md](docs/planning/README.md).
 - Update the board in the same PR as the change. Done is set by the board bot after merge ([ADR 0010](docs/decisions/0010-board-sync-bot.md)).
 - Significant decisions get an ADR in `docs/decisions/`.
+- On resuming work, read the current sprint's **Open topics** and brief the owner on anything `Drafted` before asking for decisions. Don't assume they remember earlier sessions.
+- Record new topics and their state in the sprint's Open topics table ([docs/planning/README.md](docs/planning/README.md#open-topics)).
+
+## Code structure
+- Small, focused functions and files: one job each.
+- Shared code lives in `packages/`; apps never import from other apps.
+- Consistent naming within a package; follow the surrounding code.
+- Prefer clear and boring over clever. Every line must be easy to explain in a review.
 
 ## Rules
 - Hot path (`apps/gateway`) does only: key lookup, limit checks, forwarding, streaming. Everything else goes to the queue.

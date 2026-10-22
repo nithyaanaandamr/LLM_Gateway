@@ -108,3 +108,10 @@ Node 24 strips types and runs `.ts` files with no build step (used by `tools/boa
 - **Your merge of the sync PR does trigger workflows.** The bot skips PRs from `bot/` branches, or it would loop.
 - **Rapid merges.** Runs queue one at a time; GitHub keeps only the newest waiting run. If 3+ PRs merge within a minute, one sync can be cancelled. Re-run it from the Actions tab.
 - **PR titles are untrusted input.** The workflow passes them via `env`, never `${{ }}` inside `run:`, which would let a title run shell commands.
+
+## CI affected packages
+
+- **Root changes run everything.** pnpm's `[ref]` filter only sees which package folders changed. A change to root config (`tsconfig.base.json`, `eslint.config.js`, the lockfile, a workflow) affects every package but belongs to none, so CI checks all packages then.
+- **Root is excluded from the filter.** Docs changes belong to the root package, and root's `lint` script is `pnpm -r lint`, so matching root would quietly check everything.
+- **Diff base is the merge commit's parent.** A PR run checks out GitHub's merge of the PR into `main`. Its first parent (`HEAD^1`) is `main`, so the diff is exactly the PR's changes.
+- **CI is not a required check yet.** Bot PRs trigger no workflows (see Board bot), so a required CI check would block them forever.

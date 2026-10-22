@@ -1,0 +1,55 @@
+# Lint, typecheck and test on every PR, only for affected packages.
+# See PITFALLS.md: CI affected packages.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push to the same PR cancels the older run
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      # PR checkout is a merge commit; depth 2 keeps its parent (main) for the diff
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      # Version comes from `packageManager` in package.json
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Pick packages to check
+        id: scope
+        run: |
+          base=$(git rev-parse HEAD^1)
+          echo "Changed files:"
+          git diff --name-only "$base" HEAD
+          # Any change outside packages (root config, lockfile, workflows) can affect all
+          if git diff --name-only "$base" HEAD | grep -qvE '^(apps|packages|tools|docs)/|\.md$'; then
+            echo "filter=--recursive" >> "$GITHUB_OUTPUT"
+            echo "Scope: all packages"
+          else
+            # `...` adds dependents; root is excluded as its scripts run every package
+            echo "filter=--filter='...[$base]' --filter='!llm-gateway'" >> "$GITHUB_OUTPUT"
+            echo "Scope: changed packages and their dependents"
+          fi
+
+      - run: pnpm format:check
+      - run: pnpm ${{ steps.scope.outputs.filter }} lint
+      - run: pnpm ${{ steps.scope.outputs.filter }} typecheck
+      - run: pnpm ${{ steps.scope.outputs.filter }} test

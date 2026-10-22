@@ -7,8 +7,10 @@
     "node": ">=24"
   },
   "scripts": {
-    "infra:up": "docker compose -f infra/compose.yaml up -d",
+    "infra:up": "docker compose -f infra/compose.yaml up -d --wait",
     "infra:down": "docker compose -f infra/compose.yaml down",
+    "infra:status": "docker compose -f infra/compose.yaml ps",
+    "infra:reset": "docker compose -f infra/compose.yaml down -v",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",

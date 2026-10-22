@@ -38,7 +38,7 @@ Start at [docs/README.md](docs/README.md).
 
 ## Local setup
 
-Not runnable yet. Tooling is set up in Phase 0 (see board tasks GW-003 to GW-005).
+Apps are not built yet. Tooling and local infra (Postgres, Redis) work.
 
 ### Prerequisites (macOS)
 
@@ -75,3 +75,7 @@ Run from the repo root:
 | `pnpm typecheck` | TypeScript check, every package |
 | `pnpm test` | Vitest, every package |
 | `pnpm format` / `pnpm format:check` | Prettier: fix / check formatting |
+| `pnpm infra:up` | Start Postgres and Redis; waits until both are healthy |
+| `pnpm infra:status` | Show containers and health |
+| `pnpm infra:down` | Stop them (data kept) |
+| `pnpm infra:reset` | Stop and **delete** local data |

@@ -79,3 +79,21 @@ Without admin privileges, OrbStack doesn't create `/var/run/docker.sock`. The `d
 ## OrbStack licence
 
 Free for personal, non-commercial use. Commercial use needs a paid licence. Fine for this project; check again if that changes.
+
+## TypeScript pinned to 6.0
+
+TypeScript 7 is out, but typescript-eslint supports only `<6.1` (as of 2026-10-22). Using TS 7 would break type-aware lint. Upgrade once typescript-eslint supports it.
+
+TS 6 also stopped auto-loading `@types/*`. Node types are listed in `tsconfig.base.json` (`"types": ["node"]`); the dashboard sets its own.
+
+## Type-aware lint
+
+ESLint uses typescript-eslint's type-checked rules. They catch bugs plain lint misses, e.g. a promise that is never awaited (an error silently lost on the hot path). Cost: lint is slower, and every linted `.ts` file must belong to a package's `tsconfig.json`.
+
+## jsx-a11y and ESLint 10
+
+`eslint-plugin-jsx-a11y` (React accessibility rules) doesn't support ESLint 10 yet (as of 2026-10-22). It's needed only once the dashboard has JSX. When scaffolding the dashboard: check support, or fall back to ESLint 9.
+
+## Prettier skips Markdown
+
+Prettier pads Markdown tables, which rewrites every doc on each edit. Docs are hand-formatted; `.prettierignore` excludes `*.md`.

@@ -52,6 +52,7 @@ All choices are **Accepted**; linked ADRs explain why.
 |---|---|---|---|---|
 | fnm | Node version manager | Fast; reads `.nvmrc` and switches on `cd` | nvm, Volta, Homebrew `node@24` | Accepted |
 | pnpm via corepack | Package manager | Version pinned in `package.json`, same for everyone | npm, Yarn | Accepted |
+| TypeScript 6 + ESLint (typescript-eslint, type-aware) + Prettier | Types, lint, formatting | Type-aware lint catches unawaited promises; Prettier ends style debates | Biome | Accepted |
 | OrbStack | Local Docker runtime (macOS) | Light on memory and battery, fast start; free for personal use | Docker Desktop, Colima | Accepted |
 
 ## Deploy

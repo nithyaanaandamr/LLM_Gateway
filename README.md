@@ -63,3 +63,15 @@ docker version     # client and server both listed
 ```
 
 Versions last checked: 2026-10-22 (Node 24.22.1, pnpm 12.14.0, OrbStack 2.2.4, Docker 29.8.2, Compose 5.5.0).
+
+### Scripts
+
+Run from the repo root:
+
+| Command | Does |
+|---|---|
+| `pnpm install` | Install all dependencies |
+| `pnpm lint` | ESLint, every package |
+| `pnpm typecheck` | TypeScript check, every package |
+| `pnpm test` | Vitest, every package |
+| `pnpm format` / `pnpm format:check` | Prettier: fix / check formatting |

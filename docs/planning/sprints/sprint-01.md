@@ -12,6 +12,7 @@
 | GW-003 | Install toolchain | Done |
 | GW-004 | Root tooling | Done |
 | GW-005 | Local infra running | Done |
+| GW-006 | CI workflow | Open |
 | GW-008 | Protect `main` | Done |
 | GW-010 | Finalise roadmap and Phase 1 tasks | Open |
 | GW-011 | Board sync bot and review label gate | Done |

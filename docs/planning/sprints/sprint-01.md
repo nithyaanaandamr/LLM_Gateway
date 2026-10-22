@@ -12,9 +12,9 @@
 | GW-003 | Install toolchain | Done |
 | GW-004 | Root tooling | Done |
 | GW-005 | Local infra running | Done |
-| GW-006 | CI workflow | Open |
+| GW-006 | CI workflow | Done |
 | GW-008 | Protect `main` | Done |
-| GW-010 | Finalise roadmap and Phase 1 tasks | Open |
+| GW-010 | Finalise roadmap and Phase 1 tasks | Done |
 | GW-011 | Board sync bot and review label gate | Done |
 
 Status is `Open` or `Done`. The board bot sets `Done` after merge.

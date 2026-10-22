@@ -1,0 +1,3 @@
+# Docs are hand-formatted (see PITFALLS.md: Prettier skips Markdown)
+*.md
+pnpm-lock.yaml

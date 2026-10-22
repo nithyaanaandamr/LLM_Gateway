@@ -1,4 +1,6 @@
-# Local Postgres + Redis. Run: pnpm infra:up
+# Local Postgres + Redis. Run: pnpm infra:up (waits until both are healthy)
+name: llm-gateway
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -7,16 +9,27 @@ services:
       POSTGRES_PASSWORD: gateway
       POSTGRES_DB: gateway
     ports:
-      - "5432:5432"
+      # Localhost only, not the whole network
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "gateway", "-d", "gateway"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
 
   redis:
     image: redis:7-alpine
     # BullMQ requires noeviction (see PITFALLS.md: BullMQ needs noeviction)
     command: ["redis-server", "--maxmemory-policy", "noeviction"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
 
 volumes:
   pgdata:

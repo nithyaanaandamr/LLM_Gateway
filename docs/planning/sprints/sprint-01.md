@@ -5,7 +5,7 @@
 
 ## Scope
 
-GW-001, GW-002, GW-003, GW-008, GW-010
+GW-001, GW-002, GW-003, GW-004, GW-005, GW-008, GW-010
 
 ## Retro
 

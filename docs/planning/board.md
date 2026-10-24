@@ -11,12 +11,12 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-012 | Data model spec | 1 | Doc lists tables, columns, relations for users, projects, provider keys, gateway keys; one provider key per project; reviewed |
 
 ## Ready
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-012 | Data model spec | 1 | Doc lists tables, columns, relations for users, projects, provider keys, gateway keys; one provider key per project; reviewed |
 
 ## Backlog
 

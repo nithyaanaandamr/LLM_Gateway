@@ -13,4 +13,12 @@
 
 ## Later (post-v1)
 
-Budget alert emails, second provider, response caching, opt-in prompt logging, dedicated log store.
+Budget alert emails, teams ([ADR 0011](../decisions/0011-project-ownership.md)), second provider, response caching, opt-in prompt logging, dedicated log store.
+
+## Professional nice-to-haves
+
+What a production product would add once real traffic or customers need it. Skipped in v1 on purpose.
+
+| Item | Why it matters | Cost | Notes |
+|---|---|---|---|
+| Monthly partitions for `logs.request_logs` | Retention drops a whole month instantly instead of deleting rows; smaller indexes per month | Hand-written SQL migrations (Drizzle has no support); a job that creates next month's partition | Primary key already includes `started_at`, so no key change ([data-model.md](../architecture/data-model.md#logsrequest_logs)) |

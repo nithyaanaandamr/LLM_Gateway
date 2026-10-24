@@ -36,7 +36,7 @@ BullMQ sends many Redis commands even when idle. On pay-per-command services (e.
 
 ## Gateway keys use a fast hash, not bcrypt
 
-Gateway keys are 32 random bytes, so they can't be guessed. A fast hash (SHA-256) is safe here. bcrypt/argon2 are deliberately slow and built for weak human passwords; using them would add latency to every request. Dashboard **passwords** still use argon2.
+Gateway keys are 32 random bytes, so they can't be guessed. A fast hash (SHA-256) is safe here. bcrypt/argon2 are deliberately slow and built for weak human passwords; using them would add latency to every request. Dashboard **passwords** still use a slow hash: Better Auth's default, scrypt (an earlier note said argon2; corrected 2026-10-23).
 
 ## AES-GCM nonce reuse
 
@@ -119,3 +119,46 @@ Node 24 strips types and runs `.ts` files with no build step (used by `tools/boa
 ## Sprint file tables
 
 The board bot marks a row Done if its first cell is a task ID (`| GW-### |`), in any table of a sprint file. Only Scope rows may start with an ID. Open topics rows start with the topic name; put task IDs in the Link column.
+
+## Cascades don't reach Redis
+
+`ON DELETE CASCADE` removes a project's gateway keys from Postgres, but their entries in the Redis key cache stay. Until they expire, the gateway would still accept those keys. Every delete or revoke goes through app code that also clears the cache; never a bare SQL delete.
+
+## Provider key bound to its project
+
+Provider keys are encrypted with the row's `project_id` as AES-GCM additional data (AAD). AAD isn't secret and isn't stored in the ciphertext, but decryption fails if it doesn't match. So a ciphertext copied into another project's row (by a bug or an attacker with DB write access) can't be decrypted there.
+
+## No foreign keys into the logs schema
+
+`logs` tables copy `project_id` and `gateway_key_id` but have no foreign keys to `app`. The log store may move to a separate database (ADR 0007), where foreign keys can't follow. It also means deleting a project never blocks on, or slows down for, millions of log rows. Cost: a log row can point at a project that no longer exists; reports must handle a missing name.
+
+## Log job retries
+
+BullMQ delivers a job at least once, so a batch of log rows can arrive twice.
+- `request_logs` has a primary key on `(request_id, started_at)`; inserts use `ON CONFLICT DO NOTHING`, so the copy is dropped.
+- Rollups are rebuilt from raw rows for the hours a batch touched, never incremented (`count = count + n`). Adding would double-count on every retry.
+
+## Percentiles don't add up
+
+The p95 of two hours is not the average of their p95s. Rollups store sums (count, tokens, cost, total latency), which give totals and averages. p95 needs raw rows (or a histogram), so it comes from `request_logs` within retention.
+
+## Daily totals depend on timezone
+
+"Today's spend" starts at midnight local time. A UTC daily table is wrong for most viewers, so we keep hourly rollups and add hours up in the viewer's timezone. Half-hour offsets (Adelaide UTC+9:30, India UTC+5:30) still split one hour across two days; days there are off by up to 30 minutes at the edges. Exact fix if needed: 30-minute buckets.
+
+## Provider error messages can contain prompts
+
+Provider errors often quote the request ("This model's maximum context length is… your messages: …"). Logging the message would leak prompt content. Logs store only our own short `reason` code.
+
+## Money in nano-dollars
+
+Floats can't hold money exactly (0.1 + 0.2 ≠ 0.3). Integers can. Micro-dollars aren't small enough: a cheap model at $0.15 per million tokens costs 0.15 micro-dollars per token, so short requests would round to 0. Nano-dollars ($0.000000001) are exact for current prices. A `bigint` holds up to ~$9.2 billion in nano-dollars. In JS, values above 2^53 nano-dollars (~$9 million) lose precision as `number`; per-request values never get close, but large sums should be read as `bigint`.
+
+## UUID v7 for request logs
+
+App tables use random UUID v4: they're small, so where new rows land in the index doesn't matter. `request_logs` grows with every request. UUID v7 starts with a timestamp, so new IDs sort after old ones and inserts go to the end of the index instead of random pages. Postgres 17 has no built-in v7, so the gateway generates it.
+
+## Drizzle can't declare partitioned tables
+
+Drizzle's schema has no `PARTITION BY` (open request: drizzle-orm issue #6235, as of 2026-10-23). Partitioned tables need hand-written SQL migrations, and tools that read the live database (`drizzle-kit pull`/`push`) may mishandle partitions. Use `generate` + `migrate` only.
+

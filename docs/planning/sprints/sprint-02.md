@@ -28,6 +28,9 @@ Status is `Open` or `Done`. The board bot sets `Done` after merge.
 | One provider key per project | Decided | [board.md](../board.md): GW-019 |
 | Config from env vars; secret store at deploy | Decided | [board.md](../board.md): GW-016 |
 | CI required; bot PRs need workflow approval | Decided | [PITFALLS.md](../../../PITFALLS.md): Board bot |
+| Data model and its 7 open questions | Decided | [data-model.md](../../architecture/data-model.md): GW-012 |
+| Project ownership: owner now, teams later | Decided | [ADR 0011](../../decisions/0011-project-ownership.md): GW-012 |
+| Logs schema and its 7 open questions | Decided | [data-model.md](../../architecture/data-model.md): GW-012 |
 
 States and rules: [README.md](../README.md#open-topics).
 

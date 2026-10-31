@@ -35,40 +35,22 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Switch to sync branch
+      # Rebuilt from main every run, never merged (see PITFALLS.md: Board bot)
+      - name: Rebuild sync branch
+        id: board
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          open_pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
-          if [ -n "$open_pr" ]; then
-            # Add to the open sync PR, catching up with main first
-            git switch "$BRANCH"
-            git merge --no-edit origin/main
-          else
-            # Previous sync PR merged or none yet: start fresh from main
-            git switch -C "$BRANCH" origin/main
-          fi
+          bash tools/board-bot/rebuild-branch.sh
 
-      - name: Move tasks to Done
-        id: board
-        env:
-          # Passed via env, never inlined in the script (shell injection)
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          MERGED_AT: ${{ github.event.pull_request.merged_at }}
-        run: |
-          date=$(TZ="$TIMEZONE" date -d "$MERGED_AT" +%F)
-          node tools/board-bot/src/main.ts --title "$PR_TITLE" --date "$date"
-
-      - name: Commit and open or update sync PR
+      - name: Push and open sync PR
         if: steps.board.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          IDS: ${{ steps.board.outputs.ids }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          git commit -am "docs(${IDS}): move to Done after #${PR_NUMBER}"
           git push --force-with-lease origin "$BRANCH"
           if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')" ]; then
             gh pr create --base main --head "$BRANCH" \

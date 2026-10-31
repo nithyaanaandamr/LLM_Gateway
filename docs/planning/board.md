@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-012 | Data model spec | 1 | Doc lists tables, columns, relations for users, projects, provider keys, gateway keys; one provider key per project; reviewed |
 
 ## Ready
 
@@ -48,3 +47,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-006 | CI workflow | 0 | 2026-10-22 |
 | GW-010 | Finalise roadmap and Phase 1 tasks | 0 | 2026-10-22 |
 | GW-022 | Close Sprint 01, start Sprint 02 | 0 | 2026-10-22 |
+| GW-012 | Data model spec | 1 | 2026-10-31 |

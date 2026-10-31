@@ -7,7 +7,7 @@
 
 | ID | Task | Status |
 |---|---|---|
-| GW-012 | Data model spec | Open |
+| GW-012 | Data model spec | Done |
 | GW-013 | DB package: Drizzle + Testcontainers | Open |
 | GW-014 | App schema and migrations | Open |
 | GW-015 | Crypto and key helpers in `shared` | Open |

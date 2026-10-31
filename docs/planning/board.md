@@ -11,6 +11,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-026 | Board bot rebuilds its branch instead of merging main | 0 | Each run resets `bot/board-sync` to `main` and replays earlier PRs; PRs merging while the sync PR is open no longer break the sync; tested on the #12/#13 case |
 
 ## Ready
 

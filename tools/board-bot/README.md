@@ -2,7 +2,7 @@
 
 Moves a merged PR's tasks to Done on [the board](../../docs/planning/board.md) and in sprint files. Run by `.github/workflows/board-sync.yml`; see [ADR 0010](../../docs/decisions/0010-board-sync-bot.md).
 
-The script only edits files. The workflow handles git and the PR.
+`src/main.ts` only edits files. `rebuild-branch.sh` rebuilds the sync branch from `main` and commits once per merged PR; the workflow pushes and opens the PR. Replays read the commit messages (`docs(GW-###): move to Done after #N`), so keep that format.
 
 **Run locally** (from the repo root; edits files in place):
 

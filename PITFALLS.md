@@ -107,7 +107,8 @@ Node 24 strips types and runs `.ts` files with no build step (used by `tools/boa
 - **Bot PRs wait for approval.** When the built-in token opens or updates a PR, GitHub creates its workflow runs but holds them as `action_required` (prevents loops). Click "Approve workflows to run" on the PR, and its checks (CI, `review-label`) run. Seen on PR #4. If that click becomes a chore, a GitHub App token for the bot removes it.
 - **Your merge of the sync PR does trigger workflows.** The bot skips PRs from `bot/` branches, or it would loop.
 - **Rapid merges.** Runs queue one at a time; GitHub keeps only the newest waiting run. If 3+ PRs merge within a minute, one sync can be cancelled. Re-run it from the Actions tab.
-- **PR titles are untrusted input.** The workflow passes them via `env`, never `${{ }}` inside `run:`, which would let a title run shell commands.
+- **PR titles are untrusted input.** `rebuild-branch.sh` reads them with `gh` into quoted shell variables. Never put PR data in `${{ }}` inside `run:`, which would let a title run shell commands.
+- **The bot rebuilds its branch every run.** Each run resets `bot/board-sync` to `main`, replays one commit per PR already on the sync PR (read from the `move to Done after #N` commit messages), then adds the new PR. It used to merge `main` in instead, which conflicted whenever a feature PR edited the board table next to a row the bot had moved: the syncs for #12 and #13 were lost (2026-10-31, fixed in GW-026). So: hand-made commits on `bot/board-sync` are dropped on the next run, and the commit message format must stay as it is.
 
 ## CI affected packages
 

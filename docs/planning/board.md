@@ -11,6 +11,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-013 | DB package: Drizzle + Testcontainers | 1 | `packages/db` connects to Postgres; tests spin up a throwaway Postgres; migrations run in tests |
 
 ## Ready
 
@@ -21,7 +22,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-013 | DB package: Drizzle + Testcontainers | 1 | `packages/db` connects to Postgres; tests spin up a throwaway Postgres; migrations run in tests |
 | GW-014 | App schema and migrations | 1 | Tables from GW-012 exist via migration; log tables in separate `logs` schema (ADR 0007); minimal Better Auth config generates the `auth` tables (routes are GW-017) |
 | GW-015 | Crypto and key helpers in `shared` | 1 | Encrypt/decrypt provider keys; generate `gw_live_…` keys; hash for lookup; unit tested |
 | GW-016 | Admin API skeleton | 1 | Fastify app starts; health route; error format; config read from environment variables and validated at startup (refuses to start if one is missing); `.env` for local dev only |

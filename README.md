@@ -72,6 +72,7 @@ Run from the repo root:
 | Command | Does |
 |---|---|
 | `pnpm install` | Install all dependencies |
+| `pnpm build` | Compile every package and app to dist/ (lint, typecheck and test build first on their own) |
 | `pnpm lint` | ESLint, every package |
 | `pnpm typecheck` | TypeScript check, every package |
 | `pnpm test` | Vitest, every package |
@@ -80,3 +81,17 @@ Run from the repo root:
 | `pnpm infra:status` | Show containers and health |
 | `pnpm infra:down` | Stop them (data kept) |
 | `pnpm infra:reset` | Stop and **delete** local data |
+| `pnpm db:generate` | Make a migration from schema changes |
+| `pnpm db:migrate` | Apply migrations to the DB in `.env` (needs `pnpm infra:up`) |
+
+### Tests and Docker
+
+Tests start their own throwaway Postgres (Testcontainers), so `pnpm infra:up` isn't needed for tests, but Docker (OrbStack) must be running.
+
+If tests fail with "Could not find a working container runtime strategy": enable OrbStack admin privileges (see Prerequisites), or, without admin, run once:
+
+```sh
+echo "docker.host=unix://$HOME/.orbstack/run/docker.sock" >> ~/.testcontainers.properties
+```
+
+(Your shell fills in `$HOME`; the file lives in your home folder, not the repo.) Details: [PITFALLS.md: Testcontainers finds Docker](PITFALLS.md#testcontainers-finds-docker).

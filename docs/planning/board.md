@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-016 | Admin API skeleton | 1 | Fastify app starts; health route; error format; config read from environment variables and validated at startup (refuses to start if one is missing); `.env` for local dev only |
 
 ## Ready
 
@@ -51,3 +50,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-012 | Data model spec | 1 | 2026-10-31 |
 | GW-013 | DB package: Drizzle + Testcontainers | 1 | 2026-10-31 |
 | GW-015 | Crypto and key helpers in `shared` | 1 | 2026-10-31 |
+| GW-016 | Admin API skeleton | 1 | 2026-10-31 |

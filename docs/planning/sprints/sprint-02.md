@@ -11,7 +11,7 @@
 | GW-013 | DB package: Drizzle + Testcontainers | Done |
 | GW-014 | App schema and migrations | Open |
 | GW-015 | Crypto and key helpers in `shared` | Done |
-| GW-016 | Admin API skeleton | Open |
+| GW-016 | Admin API skeleton | Done |
 | GW-017 | Dashboard auth (Better Auth) | Open |
 | GW-018 | Projects API | Open |
 | GW-019 | Provider key API | Open |

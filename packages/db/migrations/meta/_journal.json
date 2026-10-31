@@ -8,6 +8,13 @@
       "when": 1793435327112,
       "tag": "0000_postgres_schemas",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793447221943,
+      "tag": "0001_auth_app_logs_tables",
+      "breakpoints": true
     }
   ]
 }

@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-026 | Board bot rebuilds its branch instead of merging main | 0 | Each run resets `bot/board-sync` to `main` and replays earlier PRs; PRs merging while the sync PR is open no longer break the sync; tested on the #12/#13 case |
 
 ## Ready
 
@@ -52,3 +51,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-013 | DB package: Drizzle + Testcontainers | 1 | 2026-10-31 |
 | GW-015 | Crypto and key helpers in `shared` | 1 | 2026-10-31 |
 | GW-016 | Admin API skeleton | 1 | 2026-10-31 |
+| GW-026 | Board bot rebuilds its branch instead of merging main | 0 | 2026-10-31 |

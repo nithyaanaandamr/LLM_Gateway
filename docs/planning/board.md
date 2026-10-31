@@ -32,6 +32,9 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-021 | Phase 1 E2E test | 1 | Test: sign up → create project → add provider key → get gateway key |
 | GW-007 | Fake provider server | 2 | Streaming + non-streaming; configurable delay, error, disconnect |
 | GW-009 | Research Redis failure handling | 2 | Findings recorded in a new ADR superseding 0008 |
+| GW-023 | Source maps in `start` and `dev` | 1 | Apps run Node with `--enable-source-maps`; a 5xx stack trace in the logs points at `.ts` lines; ADR 0012 recipe updated |
+| GW-024 | Move error shape types to `shared` | 1 | `ErrorBody` and `ErrorCode` (types only) live in `packages/shared`; admin-api imports them; usable by the dashboard |
+| GW-025 | Fix board-bot PITFALLS reference | 0 | `tools/board-bot/tsconfig.json` comment cites the real heading "Node runs TypeScript directly" |
 
 ## Done
 

@@ -1,0 +1,16 @@
+{
+  // Compiles src/ (minus tests) to dist/. `tsc -b` builds the referenced packages first.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "composite": true,
+    "declarationMap": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    // Inside dist/, so deleting dist/ forces a rebuild (see PITFALLS.md: Stale dist)
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"],
+  "references": [{ "path": "../db/tsconfig.build.json" }]
+}

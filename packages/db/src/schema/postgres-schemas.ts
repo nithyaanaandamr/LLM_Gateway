@@ -1,6 +1,5 @@
-// Postgres schemas from docs/architecture/data-model.md; tables are added in GW-014
+// Postgres schemas from docs/architecture/data-model.md; "auth" is declared in the generated auth.ts
 import { pgSchema } from "drizzle-orm/pg-core";
 
 export const appSchema = pgSchema("app");
-export const authSchema = pgSchema("auth");
 export const logsSchema = pgSchema("logs");

@@ -245,3 +245,37 @@ Crypto uses `node:crypto`, which browsers don't have. It is exported only via `@
 ## Hash lookup needs no constant-time compare
 
 The attacker picks the key but can't steer its SHA-256 hash, so timing the DB lookup teaches them nothing about real keys. Constant-time compare (`timingSafeEqual`) matters only when comparing a secret directly to attacker input in JS.
+
+## Empty env vars count as missing
+
+`.env` lines like `ADMIN_API_PORT=` give `""`, and `Number("")` is `0` (any free port). Config drops empty values before validating, so they report "is required".
+
+## Config validates only what the code reads
+
+We don't require future vars now: it forces fake values, and a var's rules belong with the code that uses it. Rule: a task that reads a new var adds it to the Zod schema, `.env.example` and the README in the same PR.
+
+## .env is for local dev only
+
+Only the `dev` script loads it (Node's `--env-file-if-exists`). App code never reads `.env`, so production can't pick one up by accident. Real env vars win over the file. That includes an empty one: `ADMIN_API_PORT=` set in the shell blocks the `.env` value, so dev reports "is required". Production values come from the platform / secret store.
+
+## Error responses never leak internals
+
+5xx bodies are always generic; the full error is logged with the same `requestId`. 4xx messages from Fastify are passed through (they describe the client's own request). `AppError` messages must be written to be client-safe. Exception: requests arriving during shutdown get Fastify's own 503 body (`return503OnClosing`), which skips our handler. Also not covered: errors Node rejects before Fastify sees the request (malformed HTTP, 431 headers too large) use Node's own response; a `clientErrorHandler` could wrap them later. Invalid URLs are covered (`frameworkErrors`).
+
+## Log redaction
+
+Fastify's default request log has no headers; `redact` is a backstop for code that logs `request.headers`. Add new sensitive header names (e.g. a future API-key header) to `REDACT_PATHS`.
+
+## Custom error handler must log
+
+Once `setErrorHandler` is used, Fastify no longer logs errors. Our handler logs 5xx itself (4xx already show in the "request completed" line).
+
+## Graceful shutdown
+
+On SIGTERM, `app.close()` stops new connections, finishes in-flight requests and runs `onClose` hooks (close DB/Redis there). `process.once`: a second signal kills at once. No own timeout: Docker (10 s) and ECS (30 s) SIGKILL after their grace period. Tests must send the signal once.
+
+Keep-alive trap: a connection that was busy when SIGTERM arrived goes back to idle after its response, and `app.close()` only closes connections that were idle at that moment. Node then waits for Fastify's 72 s keep-alive timeout, past Docker's 10 s. Fix: after `preClose` we add `connection: close` to every response, so the socket ends with the response. Don't use `forceCloseConnections: true`: it cuts in-flight requests.
+
+## Dev runs two watchers
+
+`tsc -b -w` rebuilds the app and the packages it uses; `node --watch dist/main.js` restarts when `dist/` changes. `concurrently --kill-others` stops both on Ctrl+C. Not `a & b` in the script: in a non-interactive shell a background job ignores Ctrl+C, so it keeps running after you quit. The script builds once first so Node never starts before `dist/` exists.

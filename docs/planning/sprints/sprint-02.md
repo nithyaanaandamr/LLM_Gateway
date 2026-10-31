@@ -32,6 +32,7 @@ Status is `Open` or `Done`. The board bot sets `Done` after merge.
 | Project ownership: owner now, teams later | Decided | [ADR 0011](../../decisions/0011-project-ownership.md): GW-012 |
 | Logs schema and its 7 open questions | Decided | [data-model.md](../../architecture/data-model.md): GW-012 |
 | Auth tables: minimal Better Auth config comes in with the schema | Decided | [board.md](../board.md): GW-014, GW-017 |
+| Packages and apps compile to dist (tsc -b) | Decided | [ADR 0012](../../decisions/0012-packages-compile-to-dist.md): GW-013 |
 
 States and rules: [README.md](../README.md#open-topics).
 

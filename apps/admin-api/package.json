@@ -4,8 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "build": "tsc -b tsconfig.build.json",
+    "dev": "tsc -b tsconfig.build.json && concurrently --kill-others --names tsc,app \"tsc -b -w --preserveWatchOutput tsconfig.build.json\" \"node --watch --env-file-if-exists=../../.env dist/main.js\"",
+    "start": "node dist/main.js",
+    "lint": "tsc -b tsconfig.build.json && eslint .",
+    "typecheck": "tsc -b tsconfig.build.json && tsc --noEmit",
+    "test": "tsc -b tsconfig.build.json && vitest run"
+  },
+  "dependencies": {
+    "fastify": "^5.12.7",
+    "fastify-type-provider-zod": "^7.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
   }
 }

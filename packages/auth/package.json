@@ -1,0 +1,26 @@
+{
+  "name": "@gw/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "lint": "tsc -b tsconfig.build.json && eslint .",
+    "typecheck": "tsc -b tsconfig.build.json && tsc --noEmit",
+    "test": "tsc -b tsconfig.build.json && vitest run",
+    "generate:schema": "tsc -b tsconfig.build.json && auth generate --config better-auth.config.ts --output ../db/src/schema/auth.ts --yes && prettier --write ../db/src/schema/auth.ts"
+  },
+  "dependencies": {
+    "@gw/db": "workspace:*",
+    "better-auth": "1.7.14",
+    "drizzle-orm": "^0.45.4"
+  },
+  "devDependencies": {
+    "auth": "1.7.14",
+    "pg": "^8.23.1",
+    "vitest": "^5.0.5"
+  }
+}

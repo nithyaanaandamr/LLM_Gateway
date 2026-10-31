@@ -18,3 +18,4 @@ Statuses: `Open` (researching) → `Proposed` (recommendation, awaiting decision
 | [0009](0009-hosting-path.md) | Hosting path and infra-as-code | Accepted |
 | [0010](0010-board-sync-bot.md) | Board sync bot and review label gate | Accepted |
 | [0011](0011-project-ownership.md) | Project ownership: single owner now, teams later | Accepted |
+| [0012](0012-packages-compile-to-dist.md) | Packages and apps compile to dist | Accepted |

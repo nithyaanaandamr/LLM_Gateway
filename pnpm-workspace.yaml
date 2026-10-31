@@ -2,3 +2,10 @@ packages:
   - "apps/*"
   - "packages/*"
   - "tools/*"
+
+# Dependency install scripts we don't run (see PITFALLS.md: pnpm blocks dependency build scripts)
+allowBuilds:
+  cpu-features: false
+  esbuild: false
+  protobufjs: false
+  ssh2: false

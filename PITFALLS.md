@@ -162,3 +162,58 @@ App tables use random UUID v4: they're small, so where new rows land in the inde
 
 Drizzle's schema has no `PARTITION BY` (open request: drizzle-orm issue #6235, as of 2026-10-23). Partitioned tables need hand-written SQL migrations, and tools that read the live database (`drizzle-kit pull`/`push`) may mishandle partitions. Use `generate` + `migrate` only.
 
+## pnpm blocks dependency build scripts
+
+pnpm 12 fails `pnpm install` (`ERR_PNPM_IGNORED_BUILDS`) when a dependency has an install script nobody approved. List each one in `allowBuilds` in `pnpm-workspace.yaml`. We set all to `false`: fewer scripts run on install, and none are needed (drizzle-kit's esbuild works without its script). A new dependency with an install script must be added there.
+
+## Migrations run once, by one process
+
+Run `pnpm db:migrate` (or the same CLI) as one deploy step before apps start, never on every app start: several instances would migrate at once. As of drizzle-orm 0.45, the migrator takes no advisory lock (checked `pg-core/dialect.js`): it reads the last applied migration, then applies the rest in one transaction. Two runs at the same moment can both see the same state and both try to apply a migration. Also: never edit a merged migration; add a new one.
+
+## pg pool idle errors
+
+`pg.Pool` emits `error` when an idle connection dies (DB restart, network drop). With no listener, Node crashes the whole process. `createDb` logs the message; the pool drops the dead connection and opens a new one on next use.
+
+## Database URL holds the password
+
+Never put `DATABASE_URL` in error messages or logs. `readDatabaseUrl` reports what is wrong with the value, not the value.
+
+## Testcontainers finds Docker
+
+Lookup order: `DOCKER_HOST` env, `docker.host` in `~/.testcontainers.properties`, `/var/run/docker.sock`, `~/.docker/run/docker.sock`. OrbStack without admin privileges has none of the default sockets, so use the per-user properties file (README: Tests and Docker); it lives in the home folder, so no user path is committed. See also OrbStack socket. GitHub's ubuntu runners have `/var/run/docker.sock`, so CI needs nothing.
+
+## Test database per file
+
+One Postgres container per test run (~6 s), plus one database per test file cloned from a migrated template (~0.1 s). A container per file is too slow; one shared database makes parallel files race each other. Rules:
+
+- The template must have no open connections while it is cloned, so `runMigrations` always closes its pool.
+- Tests must `close()` their pool in `afterAll`, before teardown stops the container.
+
+## Packages and apps compile to dist
+
+Production, dev and spawned-process tests run `dist/`. Vitest runs the package's own source and other packages' `dist/`. Every script starts with `tsc -b tsconfig.build.json`, which rebuilds only what changed (dependencies first). Imports keep `.ts`; `rewriteRelativeImportExtensions` writes `.js` in the output. The editor shows other packages' types from `dist/*.d.ts`, which update after the next build or while `dev` runs (`declarationMap` makes "Go to definition" open the source). `tools/board-bot` is the exception (see Node runs TypeScript directly). ADR 0012.
+
+## Stale dist
+
+`tsc` never deletes files. A deleted or renamed source file leaves its old `.js` in `dist/` until you run `rm -rf packages/*/dist apps/*/dist`; CI and deploy build from a clean checkout, so they never see it. Build info lives in `dist/` so that deleting `dist/` forces a rebuild (verified: next to the tsconfig, it didn't). `start` never builds: run `build` first.
+
+## Workspace dependency needs a tsconfig reference
+
+When a package imports another workspace package, add it to `package.json` **and** to `references` in `tsconfig.build.json`. Without the reference, `tsc -b` doesn't build it first, and a fresh clone fails or sees old types.
+
+## Type-only augmentations vanish from .d.ts
+
+A file with only types and a `declare module` block (like `provided-context.ts`) is dropped from the `.d.ts` graph if nothing re-exports it. Other packages then lose the augmentation (`inject("testPostgres")` became `never`). Re-export a type from the entry file.
+
+## CI builds everything first
+
+The affected-packages filter includes dependents, not dependencies. `pnpm build` runs once up front, in dependency order, so two packages never build the same dependency at the same time and a build error shows as its own step.
+
+## Migrations must keep the old version working
+
+A deploy migrates first, then starts the new app (see Migrations run once, by one process). In between, the old version still serves users on the new structure, so every migration must work with both versions.
+
+- **Safe in one deploy:** a new table; a new column that allows `NULL` or has a constant default.
+- **Not safe in one deploy:** renaming or dropping a column or table; making a column `NOT NULL`; changing a column's type. The old code still uses the old shape and fails.
+- **Do unsafe changes in two deploys ("expand, then contract"):** 1) add the new shape, copy existing data across, and make the code write both; 2) once no old code is running, remove the old shape.
+- **Review rule:** for any PR with a migration, check each SQL statement against these lists.

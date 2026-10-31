@@ -1,4 +1,4 @@
-# Lint, typecheck and test on every PR, only for affected packages.
+# Build, lint, typecheck and test on every PR; lint/typecheck/test only for affected packages.
 # See PITFALLS.md: CI affected packages.
 name: CI
 
@@ -32,6 +32,9 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # Build everything once, in dependency order (see PITFALLS.md: CI builds everything first)
+      - run: pnpm build
 
       - name: Pick packages to check
         id: scope

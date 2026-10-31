@@ -208,3 +208,12 @@ A file with only types and a `declare module` block (like `provided-context.ts`)
 ## CI builds everything first
 
 The affected-packages filter includes dependents, not dependencies. `pnpm build` runs once up front, in dependency order, so two packages never build the same dependency at the same time and a build error shows as its own step.
+
+## Migrations must keep the old version working
+
+A deploy migrates first, then starts the new app (see Migrations run once, by one process). In between, the old version still serves users on the new structure, so every migration must work with both versions.
+
+- **Safe in one deploy:** a new table; a new column that allows `NULL` or has a constant default.
+- **Not safe in one deploy:** renaming or dropping a column or table; making a column `NOT NULL`; changing a column's type. The old code still uses the old shape and fails.
+- **Do unsafe changes in two deploys ("expand, then contract"):** 1) add the new shape, copy existing data across, and make the code write both; 2) once no old code is running, remove the old shape.
+- **Review rule:** for any PR with a migration, check each SQL statement against these lists.

@@ -22,6 +22,7 @@ apps/
   dashboard/     React + Vite UI
 packages/
   shared/        Zod schemas, shared types, cost calculation
+  auth/          Better Auth config (routes in admin-api)
   db/            Drizzle schema and migrations
 tools/
   fake-provider/ Fake LLM provider for tests (no real spend)
@@ -81,6 +82,7 @@ Run from the repo root:
 | `pnpm infra:status` | Show containers and health |
 | `pnpm infra:down` | Stop them (data kept) |
 | `pnpm infra:reset` | Stop and **delete** local data |
+| `pnpm auth:generate` | Regenerate the auth tables from the Better Auth config |
 | `pnpm db:generate` | Make a migration from schema changes |
 | `pnpm db:migrate` | Apply migrations to the DB in `.env` (needs `pnpm infra:up`) |
 

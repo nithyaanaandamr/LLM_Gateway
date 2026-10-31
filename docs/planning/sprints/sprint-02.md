@@ -33,6 +33,7 @@ Status is `Open` or `Done`. The board bot sets `Done` after merge.
 | Logs schema and its 7 open questions | Decided | [data-model.md](../../architecture/data-model.md): GW-012 |
 | Auth tables: minimal Better Auth config comes in with the schema | Decided | [board.md](../board.md): GW-014, GW-017 |
 | Packages and apps compile to dist (tsc -b) | Decided | [ADR 0012](../../decisions/0012-packages-compile-to-dist.md): GW-013 |
+| Auth tables use timestamp without time zone (Better Auth generator) | Decided | [PITFALLS.md](../../../PITFALLS.md): Better Auth tables have no time zone |
 
 States and rules: [README.md](../README.md#open-topics).
 

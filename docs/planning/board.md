@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-013 | DB package: Drizzle + Testcontainers | 1 | `packages/db` connects to Postgres; tests spin up a throwaway Postgres; migrations run in tests |
 
 ## Ready
 
@@ -51,3 +50,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-010 | Finalise roadmap and Phase 1 tasks | 0 | 2026-10-22 |
 | GW-022 | Close Sprint 01, start Sprint 02 | 0 | 2026-10-22 |
 | GW-012 | Data model spec | 1 | 2026-10-31 |
+| GW-013 | DB package: Drizzle + Testcontainers | 1 | 2026-10-31 |

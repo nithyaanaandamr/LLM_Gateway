@@ -11,6 +11,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-014 | App schema and migrations | 1 | Tables from GW-012 exist via migration; log tables in separate `logs` schema (ADR 0007); minimal Better Auth config generates the `auth` tables (routes are GW-017) |
 
 ## Ready
 
@@ -21,7 +22,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-014 | App schema and migrations | 1 | Tables from GW-012 exist via migration; log tables in separate `logs` schema (ADR 0007); minimal Better Auth config generates the `auth` tables (routes are GW-017) |
 | GW-017 | Dashboard auth (Better Auth) | 1 | Builds on GW-014's auth config; sign up, log in, log out via API; session cookie; note on how sessions work (ADR 0005) |
 | GW-018 | Projects API | 1 | Logged-in user can create, list, update, delete own projects; others' projects return 404 |
 | GW-019 | Provider key API | 1 | Set/replace/remove one provider key per project; stored encrypted; never returned in full |

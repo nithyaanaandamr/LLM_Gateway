@@ -279,3 +279,27 @@ Keep-alive trap: a connection that was busy when SIGTERM arrived goes back to id
 ## Dev runs two watchers
 
 `tsc -b -w` rebuilds the app and the packages it uses; `node --watch dist/main.js` restarts when `dist/` changes. `concurrently --kill-others` stops both on Ctrl+C. Not `a & b` in the script: in a non-interactive shell a background job ignores Ctrl+C, so it keeps running after you quit. The script builds once first so Node never starts before `dist/` exists.
+
+## Auth schema is generated
+
+`packages/db/src/schema/auth.ts` is written by `pnpm auth:generate` from `packages/auth`; never edit it. It declares `authSchema` itself (so `postgres-schemas.ts` doesn't). Change the config, run `pnpm auth:generate`, then `pnpm db:generate`. The first run on a new config prints "Drizzle schema mismatch" before writing; that's expected. Needs no database or secret (the CLI config uses `drizzle.mock`).
+
+## Better Auth tables have no time zone
+
+The generator writes `timestamp` (without time zone) and has no option to change it. Drizzle writes and reads them as UTC, so values are right; only `now()` defaults use the DB session time zone, which is UTC in our image and on RDS by default. Keep the DB in UTC. Hand edits are lost on regenerate.
+
+## One copy of drizzle-orm
+
+`better-auth` brings `kysely`, an optional peer of `drizzle-orm`, so pnpm can install two drizzle-orm copies whose types don't mix ("separate declarations of a private property"). After adding deps, run `pnpm dedupe`; `grep -c '^  drizzle-orm@0.45.4(' pnpm-lock.yaml` must be 1.
+
+## Drizzle column gotchas
+
+drizzle-orm 0.45 has no `bytea` (we use `customType`). `.default(0n)` on a `bigint` column crashes drizzle-kit ("Do not know how to serialize a BigInt"); use ``.default(sql`0`)``. Generated CHECKs show fully qualified column names (`"app"."projects"."name"`); that's valid and Postgres stores the short form. Money columns use `mode: "bigint"`. Drizzle's `.desc()` writes `NULLS LAST`, which is not Postgres's plain `DESC` (that is `NULLS FIRST`), so the index can't serve `ORDER BY … DESC`; use `.desc().nullsFirst()`.
+
+## updated_at is set by Drizzle
+
+`$onUpdate(() => sql\`now()\`)` fills it on every `db.update()`. Raw SQL updates don't; no trigger exists. `now()` is the transaction's start time, the same clock as the `created_at` default.
+
+## Log tables stay inside packages/db
+
+`schema/logs.ts` isn't exported from `@gw/db`, so apps can't query log tables (ADR 0007). `drizzle.config.ts` lists it separately so migrations still include it. The future LogStore imports it directly.

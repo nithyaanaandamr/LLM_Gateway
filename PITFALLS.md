@@ -217,3 +217,31 @@ A deploy migrates first, then starts the new app (see Migrations run once, by on
 - **Not safe in one deploy:** renaming or dropping a column or table; making a column `NOT NULL`; changing a column's type. The old code still uses the old shape and fails.
 - **Do unsafe changes in two deploys ("expand, then contract"):** 1) add the new shape, copy existing data across, and make the code write both; 2) once no old code is running, remove the old shape.
 - **Review rule:** for any PR with a migration, check each SQL statement against these lists.
+
+## Master key parsing
+
+`Buffer.from(x, "base64")` silently skips bad characters and accepts any length, so a typo'd key "works" but is the wrong key. We check the exact 44-char format and the 32-byte length, and wrap the bytes in a `KeyObject` so logging it prints nothing secret.
+
+## AES-GCM short auth tags
+
+Without `authTagLength: 16`, Node accepts a tag as short as 4 bytes (verified on Node 24.22), making forgery feasible. Always pass the option and reject stored tags that aren't 16 bytes.
+
+## Project ID as AAD must be canonical
+
+AAD is compared byte by byte, so an uppercase UUID won't decrypt a row encrypted with the lowercase one. Helpers require lowercase canonical UUIDs (what Postgres returns).
+
+## Master key versions
+
+Each row stores which master key encrypted it. Decrypt picks the key by that version. Rotation = load old + new, re-encrypt rows with new, then drop old. `UnknownMasterKeyVersionError` means config is missing a key, not that data is bad. A new master key also restarts the random-nonce budget (see AES-GCM nonce reuse).
+
+## Node-only code in shared
+
+Crypto uses `node:crypto`, which browsers don't have. It is exported only via `@gw/shared/crypto`; the main `@gw/shared` entry (used by the dashboard) must never import it.
+
+## Gateway key format
+
+`gw_live_` + 64 lowercase hex (32 random bytes, 256 bits). Hex chosen for simplicity and double-click selection. Strict format check before hashing, so junk never reaches Redis or the DB and each key has exactly one hash.
+
+## Hash lookup needs no constant-time compare
+
+The attacker picks the key but can't steer its SHA-256 hash, so timing the DB lookup teaches them nothing about real keys. Constant-time compare (`timingSafeEqual`) matters only when comparing a secret directly to attacker input in JS.

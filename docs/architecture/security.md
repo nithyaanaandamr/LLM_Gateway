@@ -53,6 +53,7 @@ How the dashboard stays logged in (Better Auth, [ADR 0005](../decisions/0005-das
 - **Log out:** the row is deleted and the cookie cleared. The old cookie keeps a valid signature but its row is gone, so it stops working. The cookie cache is off for this reason.
 - **CSRF** (another site making the browser send our cookie): `SameSite=Lax`, plus an `Origin` check. Better Auth does it on `/api/auth/*`; `requireTrustedOrigin` does it for POST, PUT, PATCH and DELETE in the protected scope. We send no CORS headers.
 - **Rate limit:** 3 tries per 10 s per IP on sign-in and sign-up, in memory per process, keyed on the real connection IP.
+- **Caching:** every response carries `Cache-Control: no-store`, so user data and tokens stay out of browser, proxy and CDN caches.
 - **Secret rotation:** changing `BETTER_AUTH_SECRET` logs everyone out.
 - **Known limits (v1):** session tokens are stored unhashed (see PITFALLS.md: Session tokens in plain text); a duplicate sign-up returns 409, which reveals that an email has an account.
 

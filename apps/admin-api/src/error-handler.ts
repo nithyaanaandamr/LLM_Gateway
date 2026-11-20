@@ -21,6 +21,8 @@ export function frameworkErrorHandler(
   request: FastifyRequest,
   reply: FastifyReply,
 ): void {
+  // These errors skip the onSend hooks (no route yet), so set what the hook would set
+  reply.header("cache-control", "no-store");
   void errorHandler(error, request, reply);
 }
 

@@ -38,4 +38,5 @@ Only these exist; every other `/api/auth/*` path is a 404. Session design: [secu
 - **Origin:** unsafe methods (POST, PUT, PATCH, DELETE) need an `Origin` header from the trusted list (the dashboard origin and the API's own origin), else 403. Scripts must send it.
 - **Errors:** every error uses our shape (see the admin-api README). A duplicate email is 409, a wrong password or unknown email is 401 with the same message, a missing or invalid session is 401.
 - **Rate limit:** 3 tries per 10 s per IP on sign-in and sign-up. Over the limit: 429 `RATE_LIMITED` with a `Retry-After` header (seconds to wait).
+- **Caching:** every response, errors included, carries `Cache-Control: no-store`, so per-user data and tokens never stay in browser, proxy or CDN caches.
 - **Cookie routes under `/api`:** routes registered in `protected-api.ts` need a valid session and, for unsafe methods, a trusted `Origin`.

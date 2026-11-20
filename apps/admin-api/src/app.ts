@@ -27,6 +27,7 @@ export function buildApp(config: Config) {
   app.setErrorHandler(errorHandler);
   app.setNotFoundHandler(notFoundHandler);
   closeConnectionsAfterResponseOnShutdown(app);
+  noStoreOnEveryResponse(app);
   const connection = createDb(config.databaseUrl);
   app.addHook("onClose", () => connection.close());
   // `void`: plugins load later, on ready()/listen()/inject()
@@ -35,6 +36,15 @@ export function buildApp(config: Config) {
   void app.register(authRoutes, { auth, baseUrl: config.authBaseUrl });
   void app.register(protectedApi, { auth, trustedOrigins: trustedOrigins(config) });
   return app;
+}
+
+// Responses carry per-user data and tokens: no browser, proxy or CDN may keep them.
+// Set on the root instance, so it covers every route, the error handler and the 404 handler.
+function noStoreOnEveryResponse(app: FastifyInstance): void {
+  app.addHook("onSend", (_request, reply, payload, done) => {
+    reply.header("cache-control", "no-store");
+    done(null, payload);
+  });
 }
 
 // see PITFALLS.md: Graceful shutdown

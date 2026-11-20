@@ -11,6 +11,7 @@
     "infra:down": "docker compose -f infra/compose.yaml down",
     "infra:status": "docker compose -f infra/compose.yaml ps",
     "infra:reset": "docker compose -f infra/compose.yaml down -v",
+    "auth:generate": "pnpm --filter @gw/auth generate:schema",
     "db:generate": "pnpm --filter @gw/db generate",
     "db:migrate": "pnpm --filter @gw/db migrate",
     "build": "pnpm -r build",

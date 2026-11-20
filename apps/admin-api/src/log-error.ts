@@ -5,14 +5,15 @@ const MAX_CAUSE_DEPTH = 5;
 // Postgres codes ("57P01") and Node codes ("ECONNREFUSED"): short and safe to log
 const SAFE_CODE = /^[A-Za-z0-9_]{1,32}$/;
 
-function causeChain(error: unknown): unknown[] {
+// `truncated`: the chain went on past the depth cap, so we cannot say what is in the rest
+function causeChain(error: unknown): { chain: unknown[]; truncated: boolean } {
   const chain: unknown[] = [];
   let current = error;
   while (chain.length < MAX_CAUSE_DEPTH && current instanceof Error) {
     chain.push(current);
     current = current.cause;
   }
-  return chain;
+  return { chain, truncated: current instanceof Error };
 }
 
 // Checked by name: Drizzle's class does not set `error.name`
@@ -27,8 +28,10 @@ function safeCode(error: unknown): string | undefined {
 
 // What to give pino as `err`. A database query error (also when wrapped in another error)
 // becomes { type, code }, the code coming from the real cause. Other errors pass through.
+// A chain deeper than the cap becomes { type: "TruncatedErrorChain" }: the rest is not inspected.
 export function errorForLog(error: unknown): unknown {
-  const chain = causeChain(error);
+  const { chain, truncated } = causeChain(error);
+  if (truncated && !chain.some(isQueryError)) return { type: "TruncatedErrorChain" };
   if (!chain.some(isQueryError)) return error;
   return { type: "DrizzleQueryError", code: chain.map(safeCode).find((c) => c !== undefined) };
 }

@@ -52,6 +52,27 @@ describe("errorForLog", () => {
     expect(errorForLog(queryError(cause))).toEqual({ type: "DrizzleQueryError", code: undefined });
   });
 
+  it("redacts an error chain deeper than the cap instead of passing it through", () => {
+    let deep: Error = queryError(connectionRefused());
+    for (let i = 0; i < 5; i++) deep = new Error("wrapper", { cause: deep });
+
+    const logged = errorForLog(deep);
+
+    expect(logged).toEqual({ type: "TruncatedErrorChain" });
+    expect(JSON.stringify(logged)).not.toContain("SENTINEL");
+  });
+
+  it("still finds a query error at the last inspected depth", () => {
+    let deep: Error = queryError(connectionRefused());
+    for (let i = 0; i < 4; i++) deep = new Error("wrapper", { cause: deep });
+
+    expect(errorForLog(deep)).toEqual({ type: "DrizzleQueryError", code: undefined });
+  });
+
+  it("matches Drizzle's class name, so a rename fails here with a clear message", () => {
+    expect(queryError().constructor.name).toBe("DrizzleQueryError");
+  });
+
   it("passes other errors and values through unchanged", () => {
     const plain = new Error("boom");
     expect(errorForLog(plain)).toBe(plain);

@@ -1,7 +1,6 @@
 import {
   countAccessibleProjects,
   insertProject,
-  isProjectNameTaken,
   listAccessibleProjects,
   type Database,
   type Project,
@@ -9,8 +8,9 @@ import {
 import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";
 import { getAuthUser } from "../auth/get-auth-user.ts";
 import { AppError } from "../errors.ts";
+import { nameConflictOrRethrow } from "./name-conflict.ts";
 import {
-  createProjectBody,
+  projectNameBody,
   MAX_PROJECTS_PER_USER,
   projectListResponse,
   projectResponse,
@@ -21,21 +21,12 @@ export interface ProjectCollectionRoutesOptions {
   db: Database;
 }
 
-// Cap check, then insert. The duplicate name is caught from the unique constraint, not by
-// looking first, so two parallel creates can't both succeed.
-// see PITFALLS.md: Unique violations are found by constraint name
+// Cap check, then insert; a duplicate name becomes a 409 (see name-conflict.ts)
 async function createProjectFor(db: Database, userId: string, name: string): Promise<Project> {
   if ((await countAccessibleProjects(db, userId)) >= MAX_PROJECTS_PER_USER) {
     throw new AppError(409, "CONFLICT", `Project limit reached (${MAX_PROJECTS_PER_USER})`);
   }
-  try {
-    return await insertProject(db, userId, name);
-  } catch (error) {
-    if (isProjectNameTaken(error)) {
-      throw new AppError(409, "CONFLICT", "A project with this name already exists");
-    }
-    throw error;
-  }
+  return insertProject(db, userId, name).catch(nameConflictOrRethrow);
 }
 
 export const projectCollectionRoutes: FastifyPluginCallbackZod<ProjectCollectionRoutesOptions> = (
@@ -54,7 +45,7 @@ export const projectCollectionRoutes: FastifyPluginCallbackZod<ProjectCollection
 
   app.post(
     "/api/projects",
-    { schema: { body: createProjectBody, response: { 201: projectResponse } } },
+    { schema: { body: projectNameBody, response: { 201: projectResponse } } },
     async (request, reply) => {
       // The owner is always the logged-in user, never a body field
       const project = await createProjectFor(db, getAuthUser(request).id, request.body.name);

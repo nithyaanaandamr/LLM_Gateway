@@ -5,6 +5,7 @@ import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";
 import { requireSession } from "./auth/require-session.ts";
 import { requireTrustedOrigin } from "./auth/require-trusted-origin.ts";
 import { projectCollectionRoutes } from "./projects/project-collection-routes.ts";
+import { projectScopedApi } from "./projects/project-scoped-api.ts";
 import { meRoutes } from "./routes/me.ts";
 
 export interface ProtectedApiOptions {
@@ -30,5 +31,6 @@ export const protectedApi: FastifyPluginCallbackZod<ProtectedApiOptions> = (app,
   protectScope(app, options);
   void app.register(meRoutes);
   void app.register(projectCollectionRoutes, { db: options.db });
+  void app.register(projectScopedApi, { db: options.db });
   done();
 };

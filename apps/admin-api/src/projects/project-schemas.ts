@@ -24,8 +24,8 @@ export const projectName = z
   .min(1)
   .max(100);
 
-// Strict: unknown keys (the owner, id, ...) are a 400, not silently ignored
-export const createProjectBody = z.strictObject({ name: projectName });
+// Body of create and rename. Strict: unknown keys (the owner, id, ...) are a 400, not silently ignored
+export const projectNameBody = z.strictObject({ name: projectName });
 
 // Only these fields leave the API; the serializer drops the rest of the row (the owner)
 export const projectResponse = z.object({

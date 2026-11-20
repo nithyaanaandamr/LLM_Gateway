@@ -34,7 +34,11 @@ export function buildApp(config: Config) {
   void app.register(healthRoutes);
   const auth = createAppAuth(config, connection.db, app.log);
   void app.register(authRoutes, { auth, baseUrl: config.authBaseUrl });
-  void app.register(protectedApi, { auth, trustedOrigins: trustedOrigins(config) });
+  void app.register(protectedApi, {
+    auth,
+    trustedOrigins: trustedOrigins(config),
+    db: connection.db,
+  });
   return app;
 }
 

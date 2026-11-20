@@ -11,6 +11,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-018 | Projects API | 1 | Logged-in user can create, list, update, delete own projects; others' projects return 404; project scope (one access condition, 404 not 403); exact caps under a lock (ADR 0013) |
 
 ## Ready
 
@@ -21,7 +22,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-018 | Projects API | 1 | Logged-in user can create, list, update, delete own projects; others' projects return 404 |
 | GW-019 | Provider key API | 1 | Set/replace/remove one provider key per project; stored encrypted; never returned in full |
 | GW-020 | Gateway key API | 1 | Issue (shown once), list (prefix only), revoke; only hash stored |
 | GW-021 | Phase 1 E2E test | 1 | Test: sign up → create project → add provider key → get gateway key |
@@ -36,6 +36,11 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-030 | Password reset and email verification | 1 | Needs an email sender (dev: log or fake inbox); reset link expires; reset revokes other sessions; tests cover token reuse and expiry |
 | GW-031 | Dashboard and admin API cookie setup | 1 | Dev: Vite proxies `/api` to admin-api; browser sign-in sets the cookie and `/api/me` works; production topology documented; no CORS unless chosen in an ADR |
 | GW-032 | Sign-out reports failure when the session can't be deleted | 1 | With the DB down, sign-out returns 5xx in our error shape (or retries); the response never claims success while the session row survives; a test covers it |
+| GW-033 | Clear the gateway key cache on revoke and project delete | 2 | Revoke and project delete remove the key's Redis cache entries in the same request; a test shows the gateway rejects a key right after revoke; behaviour when Redis is down follows the ADR 0008 successor |
+| GW-034 | Rate limit admin API writes per user | 1 | **Required before first deployment** (a burst of creates from one user holds pooled connections while it waits for the cap lock, see PITFALLS.md: Lock waits share the database pool). POST/PUT/PATCH/DELETE under `/api/projects` limited per user (e.g. 60/min); over the limit: 429 `RATE_LIMITED` with `Retry-After`; a test covers it |
+| GW-035 | Master key rotation | 2 | Config takes a current key plus older versioned keys; a command re-encrypts every provider key to the current version; the gateway decrypts both during rotation; runbook in the README |
+| GW-036 | Check the provider key with the provider on save | 2 | PUT tests the key against the provider's models endpoint (fake provider in tests); a rejected key: 400 with a clear message; a provider timeout doesn't lose the save; never logs the key |
+| GW-037 | Database pool size setting and pooler plan for deployment | 1 | `DATABASE_POOL_MAX` config (default 10, validated at startup) used by `createDb`; README gives the formula (app instances × pool size + other apps ≤ Postgres `max_connections`, with headroom); pool wait timeout (`connectionTimeoutMillis`) decided; PgBouncer (transaction mode) or the cloud equivalent chosen once ADR 0009's host is picked; confirm advisory *transaction* locks work under it |
 
 ## Done
 

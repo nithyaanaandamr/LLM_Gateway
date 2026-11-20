@@ -1,20 +1,12 @@
-import { spawn, type ChildProcess } from "node:child_process";
 import { createHmac } from "node:crypto";
 import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { killAllServers, logLines, startListening, stopServer } from "./testing/server-process.ts";
 import { testConfig } from "./testing/test-config.ts";
 import { testEnv } from "./testing/test-env.ts";
 
 const FIXTURE = fileURLToPath(new URL("./test-server.fixture.ts", import.meta.url));
-const LISTENING = /Server listening at http:\/\/127\.0\.0\.1:(\d+)/;
-type Proc = {
-  child: ChildProcess;
-  exited: Promise<number | null>;
-  out: () => string;
-  err: () => string;
-};
-const running: Proc[] = [];
 
 // Env for the spawned server: fresh database, random secret
 let baseEnv: Record<string, string>;
@@ -23,43 +15,11 @@ beforeAll(async () => {
   baseEnv = testEnv(await testConfig());
 });
 
-function start(env: Record<string, string>): Proc {
-  const child = spawn(process.execPath, [FIXTURE], {
-    env: { PATH: process.env.PATH ?? "", ...baseEnv, ...env },
-  });
-  let out = "";
-  let err = "";
-  child.stdout.on("data", (d: Buffer) => (out += d.toString()));
-  child.stderr.on("data", (d: Buffer) => (err += d.toString()));
-  const exited = new Promise<number | null>((r) => child.on("exit", (c) => r(c)));
-  const p = { child, exited, out: () => out, err: () => err };
-  running.push(p);
-  return p;
+function listening(env: Record<string, string> = {}) {
+  return startListening(FIXTURE, { ...baseEnv, ...env });
 }
 
-async function listening(env: Record<string, string> = {}) {
-  const p = start(env);
-  const deadline = Date.now() + 8000;
-  while (!LISTENING.test(p.out())) {
-    if (Date.now() > deadline || p.child.exitCode !== null) throw new Error("no start: " + p.out());
-    await new Promise((r) => setTimeout(r, 25));
-  }
-  const port = LISTENING.exec(p.out())?.[1] ?? "";
-  return { ...p, url: `http://127.0.0.1:${port}` };
-}
-
-const lines = (out: string) =>
-  out
-    .split("\n")
-    .filter(Boolean)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
-
-afterEach(async () => {
-  for (const p of running.splice(0)) {
-    if (p.child.exitCode === null) p.child.kill("SIGKILL");
-    await p.exited;
-  }
-});
+afterEach(killAllServers);
 
 describe("real process: logging and shutdown", { timeout: 15_000 }, () => {
   it("5xx: client sees nothing internal, log has the full error with the same requestId", async () => {
@@ -71,7 +31,7 @@ describe("real process: logging and shutdown", { timeout: 15_000 }, () => {
     const requestId = (JSON.parse(body) as { error: { requestId: string } }).error.requestId;
     p.child.kill("SIGTERM");
     await p.exited;
-    const failed = lines(p.out()).find((l) => l.msg === "request failed");
+    const failed = logLines(p.out()).find((l) => l.msg === "request failed");
     expect(failed?.level).toBe(50);
     expect(JSON.stringify(failed)).toContain("hunter2");
     expect(failed?.reqId).toBe(requestId);
@@ -95,7 +55,7 @@ describe("real process: logging and shutdown", { timeout: 15_000 }, () => {
     p.child.kill("SIGTERM");
     await p.exited;
     expect(p.out()).not.toContain("SENTINEL");
-    const reqs = lines(p.out()).filter((l) => l.req ?? l.res);
+    const reqs = logLines(p.out()).filter((l) => l.req ?? l.res);
     expect(reqs.length).toBeGreaterThan(0); // /nope is logged
     expect(JSON.stringify(reqs)).not.toContain("/health");
   });
@@ -185,11 +145,6 @@ function forms(value: string): string[] {
   return [value, encodeURIComponent(value), decodeURIComponent(value)];
 }
 
-async function stopped(p: { child: ChildProcess; exited: Promise<number | null> }) {
-  p.child.kill("SIGTERM");
-  await p.exited;
-}
-
 describe("real process: no secrets or personal data in logs", { timeout: 30_000 }, () => {
   it("auth flow over real HTTP: nothing sensitive on stdout or stderr", async () => {
     const p = await listening();
@@ -219,7 +174,7 @@ describe("real process: no secrets or personal data in logs", { timeout: 30_000 
     expect(await me.json()).toMatchObject({ email: EMAIL });
     const signOut = await post(p.url, "/api/auth/sign-out", null, cookie);
     expect(signOut.status).toBe(200);
-    await stopped(p);
+    await stopServer(p);
 
     const output = p.out() + p.err();
     const token = ((await signIn.json()) as { token: string }).token;
@@ -229,7 +184,7 @@ describe("real process: no secrets or personal data in logs", { timeout: 30_000 
     expect(output).not.toMatch(COOKIE_WITH_VALUE);
     expect(p.err()).toBe("");
     // Better Auth's own warning comes out as a pino JSON line (every stdout line must parse)
-    const invalid = lines(p.out()).find((l) => l.msg === "Invalid password");
+    const invalid = logLines(p.out()).find((l) => l.msg === "Invalid password");
     expect(invalid).toMatchObject({ level: 40 });
   });
 
@@ -250,7 +205,7 @@ describe("real process: no secrets or personal data in logs", { timeout: 30_000 
       password: PASSWORD,
     });
     const me = await fetch(`${p.url}/api/me`, { headers: { cookie } });
-    await stopped(p);
+    await stopServer(p);
 
     expect([signUp.status, signIn.status, me.status]).toEqual([500, 500, 500]);
     const output = p.out() + p.err();
@@ -261,7 +216,7 @@ describe("real process: no secrets or personal data in logs", { timeout: 30_000 
     // Still useful: each failed request has an error line with the type and code
     for (const res of [signUp, signIn, me]) {
       const { requestId } = ((await res.json()) as { error: { requestId: string } }).error;
-      const failed = lines(p.out()).find((l) => l.reqId === requestId && l.level === 50);
+      const failed = logLines(p.out()).find((l) => l.reqId === requestId && l.level === 50);
       expect(failed?.err).toEqual({ type: "DrizzleQueryError", code: "ECONNREFUSED" });
     }
   });

@@ -30,6 +30,7 @@ Common SaaS shape (e.g. OpenAI, Vercel): team → projects → keys. Keys belong
 
 - Teams are listed under "Later" in the [roadmap](../planning/roadmap.md).
 - The single access check is what keeps the move cheap: only that function changes, its callers don't.
+- Implemented as `accessibleProjects(userId)` in `packages/db/src/repositories/project-access.ts` (GW-018). It is a SQL condition rather than a yes/no function, so one query checks access and loads the row. Only that condition reads `owner_id` to decide access, and a test fails if other code names the column.
 
 ### Moving to teams: schema changes
 

@@ -19,3 +19,4 @@ Statuses: `Open` (researching) → `Proposed` (recommendation, awaiting decision
 | [0010](0010-board-sync-bot.md) | Board sync bot and review label gate | Accepted |
 | [0011](0011-project-ownership.md) | Project ownership: single owner now, teams later | Accepted |
 | [0012](0012-packages-compile-to-dist.md) | Packages and apps compile to dist | Accepted |
+| [0013](0013-atomic-limits.md) | Every limit is one atomic check-and-count | Accepted |

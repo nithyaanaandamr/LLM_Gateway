@@ -57,6 +57,33 @@ How the dashboard stays logged in (Better Auth, [ADR 0005](../decisions/0005-das
 - **Secret rotation:** changing `BETTER_AUTH_SECRET` logs everyone out.
 - **Known limits (v1):** session tokens are stored unhashed (see PITFALLS.md: Session tokens in plain text); a duplicate sign-up returns 409, which reveals that an email has an account.
 
+## Authorization
+
+**Terms.** *Authentication* answers "who are you?" (the session cookie, see above). *Authorization* answers "may you touch this thing?". Here "this thing" is always a project, or something inside one. An **IDOR** (insecure direct object reference) is changing an ID in the URL to reach someone else's data; it is the main bug class this section prevents.
+
+Every request passes up to four checks. Each has a test that covers every route automatically.
+
+```
+ request ──▶ 1 trusted Origin? (unsafe methods)   ─┐ protected scope
+            2 valid session cookie?   else 401    ─┘ test: route-inventory.test.ts
+            3 project accessible?     else 404    ── project scope
+                                                     test: project-ownership.test.ts
+            4 child row in THIS project? else 404 ── query includes project_id
+ handler ◀──                                         test: per route
+```
+
+**The project scope.** Every route under `/api/projects/:projectId` is registered inside one plugin (`projectScopedApi`). Its `onRequest` hook looks the project up once, for the logged-in user, before the body is read. If the user can't access it, the answer is 404; otherwise the project is attached to the request and handlers read it with `getProject(request)`. A route registered in the scope without `:projectId` in its path stops `app.ready()` with an error, so a misplaced route can't ship.
+
+**One access condition.** `accessibleProjects(userId)` (`packages/db/src/repositories/project-access.ts`) is the only code that reads `owner_id` to decide access ([ADR 0011](../decisions/0011-project-ownership.md)). It is a SQL condition, so one query both checks access and loads the row, with nothing to change between check and use. When teams arrive, only this condition changes. A test fails if any other file in `packages/db/src` or `apps/admin-api/src` names the owner column.
+
+**404, not 403.** 403 says "it exists, but it isn't yours", which tells an attacker which IDs are real (an *existence oracle*). With 404, "someone else's project" and "no such project" look identical: same status, code and message, and the same single query. The owner never sees this 404. `project-ownership.test.ts` calls every `:projectId` route as another user and expects the same answer as for a random UUID, with the owner's data unchanged afterwards.
+
+**Child rows are found through their project.** A key, for example, is looked up with its own ID **and** `project.id` (`WHERE id = :keyId AND project_id = :project.id`). Without the project part, a user could act on another user's key by putting that key's ID under their own project. Handlers use `getProject(request).id` from the database, never the URL's value.
+
+**Defence in depth.** The scope is the primary check, but the repository writes `renameProject` and `deleteProject` also apply the access condition themselves. They are the only functions that touch a project by its bare ID, so a handler that skipped the scope still can't change someone else's project.
+
+**Also checked:** request bodies are strict (unknown keys such as `ownerId` are a 400, which blocks *mass assignment*); caps (100 projects per user) are exact under parallel requests ([ADR 0013](../decisions/0013-atomic-limits.md)); a malformed ID never reaches the database, so it can't cause a Postgres error. See PITFALLS.md: Not your project is 404, not 403; Project scope runs before the body is read.
+
 ## Log safety
 
 - Fastify does not log bodies; `authorization`, `cookie` and `set-cookie` are redacted.

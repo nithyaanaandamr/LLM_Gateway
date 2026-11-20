@@ -1,4 +1,5 @@
 // Test-only (excluded from the build). Never import from app code.
+import { randomUUID } from "node:crypto";
 import type { LightMyRequestResponse } from "fastify";
 import type { App } from "../app.ts";
 import type { Config } from "../config.ts";
@@ -23,7 +24,7 @@ export interface RequestOptions {
   headers?: Record<string, string>;
 }
 
-function headersFor(config: Config, options: RequestOptions): Record<string, string> {
+export function headersFor(config: Config, options: RequestOptions): Record<string, string> {
   const headers: Record<string, string> = { ...options.headers };
   const origin = options.origin === undefined ? config.dashboardOrigin : options.origin;
   if (origin !== null) headers["origin"] = origin;
@@ -69,6 +70,19 @@ export function getSession(app: App, config: Config, options: RequestOptions = {
     remoteAddress: options.remoteAddress ?? uniqueIp(),
     headers: headersFor(config, options),
   });
+}
+
+let userCounter = 0;
+
+// A new user with a random email; returns what later requests need
+export async function signUpUser(
+  app: App,
+  config: Config,
+): Promise<{ cookie: string; userId: string; email: string }> {
+  const email = `user${++userCounter}-${randomUUID()}@example.com`;
+  const res = await signUp(app, config, { name: "Test User", email, password: TEST_PASSWORD });
+  if (res.statusCode !== 200) throw new Error(`sign-up failed: ${res.statusCode}`);
+  return { cookie: cookieFrom(res), userId: res.json<{ user: { id: string } }>().user.id, email };
 }
 
 const SESSION_COOKIE = /^(__Secure-)?better-auth\.session_token=/;

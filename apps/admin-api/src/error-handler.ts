@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { toErrorResponse, type ErrorBody } from "./errors.ts";
+import { AppError, toErrorResponse, type ErrorBody } from "./errors.ts";
 import { errorForLog } from "./log-error.ts";
 
 export function errorHandler(
@@ -15,6 +15,14 @@ export function errorHandler(
   return reply.status(statusCode).send(body);
 }
 
+// Fastify's messages for these two errors contain the request URL; ours say nothing about it
+function withoutUrlInMessage(error: unknown): unknown {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (code === "FST_ERR_MAX_PARAM_LENGTH") return new AppError(414, "BAD_REQUEST", "URL too long");
+  if (code === "FST_ERR_BAD_URL") return new AppError(400, "BAD_REQUEST", "Invalid URL");
+  return error;
+}
+
 // For errors Fastify raises before routing (e.g. invalid URL)
 export function frameworkErrorHandler(
   error: unknown,
@@ -23,7 +31,7 @@ export function frameworkErrorHandler(
 ): void {
   // These errors skip the onSend hooks (no route yet), so set what the hook would set
   reply.header("cache-control", "no-store");
-  void errorHandler(error, request, reply);
+  void errorHandler(withoutUrlInMessage(error), request, reply);
 }
 
 export function notFoundHandler(request: FastifyRequest, reply: FastifyReply): FastifyReply {

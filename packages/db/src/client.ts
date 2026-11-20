@@ -4,6 +4,12 @@ import * as schema from "./schema/index.ts";
 
 export type Database = NodePgDatabase<typeof schema>;
 
+// What a transaction callback receives: same query methods as Database
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+// Repository functions that work both on their own and inside a transaction
+export type Queryable = Database | Transaction;
+
 export interface DbConnection {
   db: Database;
   close: () => Promise<void>;

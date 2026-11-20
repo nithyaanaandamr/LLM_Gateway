@@ -32,7 +32,32 @@ Each task adds its vars here.
 
 ## Routes
 
-- `GET /health`: liveness. Returns `{ "status": "ok" }` when the process is up.
+| Method | Path | Needs | Returns |
+|---|---|---|---|
+| GET | `/health` | nothing | `{ "status": "ok" }` while the process is up (liveness) |
+| POST | `/api/auth/sign-up/email` | nothing | `{ token, user }` and a session cookie |
+| POST | `/api/auth/sign-in/email` | nothing | `{ token, user, redirect, url }` and a session cookie |
+| POST | `/api/auth/sign-out` | cookie and trusted `Origin` | `{ success: true }` and a clearing cookie |
+| GET | `/api/auth/get-session` | cookie (optional) | `{ session, user }`, or `null` |
+| GET | `/api/me` | cookie | `{ id, email, name }` |
+
+Unsafe methods (POST, PUT, PATCH, DELETE) need an `Origin` header from the trusted list: the dashboard origin and the API's own origin. Rate limit on sign-in and sign-up: 3 per 10 s per IP, then 429 with `Retry-After`. Details: [api.md](../../docs/architecture/api.md#auth-and-session-routes), [security.md](../../docs/architecture/security.md#dashboard-sessions).
+
+### Adding a protected route
+
+1. Register the route inside `src/protected-api.ts` (a `register(...)` next to `meRoutes`). That scope already requires a trusted `Origin` on unsafe methods and a valid session, so a new route cannot be left open by mistake.
+2. In the handler, call `getAuthUser(request)` to get the logged-in user.
+3. Never register a route that needs login outside that scope: `getAuthUser` throws there (a logged 500).
+
+### Testing with auth
+
+Helpers are in `src/testing/auth-requests.ts` (test-only, not built):
+- `signUp`, `signIn`, `signOut`, `getSession`: send the request with `app.inject`, the dashboard `Origin` and a **unique** client IP. Pass `origin: null` to send no `Origin`.
+- `cookieFrom(response)`: the session cookie as `name=value` for the next request. It finds the cookie by name pattern, because https adds a `__Secure-` prefix.
+- `uniqueIp()`: the rate limit is per IP and its memory is shared by every app in a test file, so each request needs its own IP.
+- `testConfig()` gives a fresh migrated database and a random secret. Tests must send `Origin` (even for DELETE and POST on protected routes).
+- To test database failures in a real process (`src/server-process.test.ts`), point `DATABASE_URL` at a closed port and send a made-up token **signed with the secret** (`signedCookie`). An unsigned cookie is rejected before the database is touched.
+
 
 ## Errors
 
@@ -50,5 +75,14 @@ Every error uses one JSON shape:
 ```
 
 Codes: `BAD_REQUEST`, `VALIDATION_FAILED`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `RATE_LIMITED`, `INTERNAL`.
+
+Better Auth's own errors (`{ message, code }`) are translated into this shape (`src/auth/auth-error.ts`):
+
+| Better Auth answer | Ours |
+|---|---|
+| duplicate email (`USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`) | 409 `CONFLICT` |
+| bad input (`VALIDATION_ERROR`, password too short or long, invalid email) | 400 `VALIDATION_FAILED` |
+| other 4xx | the same status, mapped to a code (401 `UNAUTHORIZED`, 403 `FORBIDDEN`, 429 `RATE_LIMITED`, ...) with Better Auth's message |
+| 5xx | 500 `INTERNAL`, generic; the cause is logged |
 
 `details` appears only for validation errors. 5xx errors never include details. Quote the `requestId` when reporting a problem.

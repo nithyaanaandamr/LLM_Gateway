@@ -11,6 +11,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-017 | Dashboard auth (Better Auth) | 1 | Builds on GW-014's auth config; sign up, log in, log out via API; session cookie; note on how sessions work (ADR 0005) |
 
 ## Ready
 
@@ -21,7 +22,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-017 | Dashboard auth (Better Auth) | 1 | Builds on GW-014's auth config; sign up, log in, log out via API; session cookie; note on how sessions work (ADR 0005) |
 | GW-018 | Projects API | 1 | Logged-in user can create, list, update, delete own projects; others' projects return 404 |
 | GW-019 | Provider key API | 1 | Set/replace/remove one provider key per project; stored encrypted; never returned in full |
 | GW-020 | Gateway key API | 1 | Issue (shown once), list (prefix only), revoke; only hash stored |
@@ -31,6 +31,12 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-023 | Source maps in `start` and `dev` | 1 | Apps run Node with `--enable-source-maps`; a 5xx stack trace in the logs points at `.ts` lines; ADR 0012 recipe updated |
 | GW-024 | Move error shape types to `shared` | 1 | `ErrorBody` and `ErrorCode` (types only) live in `packages/shared`; admin-api imports them; usable by the dashboard |
 | GW-025 | Fix board-bot PITFALLS reference | 0 | `tools/board-bot/tsconfig.json` comment cites the real heading "Node runs TypeScript directly" |
+| GW-027 | Readiness route `GET /ready` | 1 | 200 when a DB query succeeds, 503 in our error shape when not; `routes/health.ts` comment updated (it promises this "with the first DB-backed task") |
+| GW-028 | Admin API behind a proxy: trust proxy setting | 1 | `ADMIN_API_TRUST_PROXY` config; `request.ip` is the real client IP behind Cloudflare Tunnel / ALB; a test shows two clients get separate auth rate-limit buckets |
+| GW-029 | Shared auth rate-limit store (Redis) | 1 | Limits hold across two admin-api instances and a restart; uses Better Auth `secondaryStorage` or `customStorage` on our Redis |
+| GW-030 | Password reset and email verification | 1 | Needs an email sender (dev: log or fake inbox); reset link expires; reset revokes other sessions; tests cover token reuse and expiry |
+| GW-031 | Dashboard and admin API cookie setup | 1 | Dev: Vite proxies `/api` to admin-api; browser sign-in sets the cookie and `/api/me` works; production topology documented; no CORS unless chosen in an ADR |
+| GW-032 | Sign-out reports failure when the session can't be deleted | 1 | With the DB down, sign-out returns 5xx in our error shape (or retries); the response never claims success while the session row survives; a test covers it |
 
 ## Done
 

@@ -24,3 +24,6 @@ Better Auth. Write a short note explaining how its sessions and cookies work.
 ## Consequences
 
 Auth tables are managed alongside our Drizzle schema.
+
+- The session note this ADR asks for is in [security.md](../architecture/security.md#dashboard-sessions) (GW-017).
+- Better Auth checks `Origin` only on its own routes, so our cookie routes check it on unsafe methods themselves (GW-017).

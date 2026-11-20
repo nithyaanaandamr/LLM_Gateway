@@ -75,7 +75,7 @@ cp .env.example .env
 openssl rand -base64 32   # copy the output
 ```
 
-In `.env`, put it after the empty `BETTER_AUTH_SECRET=` line, so the line reads `BETTER_AUTH_SECRET=<the output>`. Don't add a second line.
+In `.env`, paste it right after the `=` on the existing `BETTER_AUTH_SECRET=` line, so the line reads `BETTER_AUTH_SECRET=<the output>`. Don't add a second line.
 
 `.env` is git-ignored. The secret signs session cookies, and changing it logs everyone out. Dev only: production values come from the platform's secret store. Other values are described in the comments of `.env.example`.
 

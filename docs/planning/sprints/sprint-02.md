@@ -50,10 +50,10 @@ Status is `Open` or `Done`. The board bot sets `Done` after merge.
 | Repository writes check access too (defence in depth) | Decided | [security.md](../../architecture/security.md#authorization): GW-018 |
 | Keep the blocking lock; GW-034 (rate limit admin writes) ships before first deployment | Decided | [PITFALLS.md](../../../PITFALLS.md): Lock waits share the database pool |
 | Every limit is one atomic check-and-count | Decided | [ADR 0013](../../decisions/0013-atomic-limits.md): GW-018 |
-| Not your project answers 404, not 403 | Drafted | [security.md](../../architecture/security.md#authorization) |
-| Project scope checks access before the body is read | Drafted | [PITFALLS.md](../../../PITFALLS.md): Project scope runs before the body is read |
-| One MASTER_KEY, version fixed at 1, rotation later | Drafted | [board.md](../board.md): GW-035 |
-| Project names: NFC, no control or bidi characters; list sorted by bytes | Drafted | [PITFALLS.md](../../../PITFALLS.md): Names refuse control and bidi characters |
+| Not your project answers 404, not 403 | Decided | [security.md](../../architecture/security.md#authorization) |
+| Project scope checks access before the body is read | Decided | [PITFALLS.md](../../../PITFALLS.md): Project scope runs before the body is read |
+| One MASTER_KEY, version fixed at 1, rotation later | Decided | [board.md](../board.md): GW-035 |
+| Project names: NFC, no control or bidi characters; list sorted by bytes | Decided | [PITFALLS.md](../../../PITFALLS.md): Names refuse control and bidi characters |
 
 States and rules: [README.md](../README.md#open-topics).
 

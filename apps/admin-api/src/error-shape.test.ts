@@ -93,4 +93,24 @@ describe("error shape: more cases", () => {
     expect(errorOf(res)).toMatchObject({ code: "BAD_REQUEST" });
     expect(errorOf(res).requestId).toMatch(UUID);
   });
+
+  // Fastify's own messages for these two contain the whole URL; ours must not
+  it("a 5000-character path parameter: 414 with a generic message, not the URL", async () => {
+    withRoutes();
+    const res = await app.inject("/api/projects/" + "a".repeat(5000));
+    expect(res.statusCode).toBe(414);
+    expect(errorOf(res)).toMatchObject({ code: "BAD_REQUEST", message: "URL too long" });
+    expect(errorOf(res).requestId).toMatch(UUID);
+    expect(res.body.length).toBeLessThan(300);
+    expect(res.body).not.toContain("aaaa");
+    expect(res.headers["cache-control"]).toBe("no-store");
+  });
+
+  it("an invalid URL component: 400 with a generic message, not the URL", async () => {
+    withRoutes();
+    const res = await app.inject("/api/projects/%SENTINEL");
+    expect(res.statusCode).toBe(400);
+    expect(errorOf(res)).toMatchObject({ code: "BAD_REQUEST", message: "Invalid URL" });
+    expect(res.body).not.toContain("SENTINEL");
+  });
 });

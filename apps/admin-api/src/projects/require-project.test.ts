@@ -95,49 +95,82 @@ describe("projectScope guard", () => {
 
   afterAll(() => connection.close());
 
-  // An async plugin turns a throw into a rejection, so ready() reports it. A callback-style
-  // plugin that throws makes an uncaught exception instead: the process stops at startup.
-  function appWithScope(register: (scope: FastifyInstance) => void) {
-    const app = Fastify();
-    void app.register(async (scope) => {
-      projectScope(scope, { db: connection.db });
-      register(scope);
-      await Promise.resolve(); // makes this a real async plugin
+  const BAD = "Routes in the project scope must have :projectId in the path: /api/things";
+
+  // Plugins the way the app writes them (callback style) and the async way
+  type Plugin = (scope: FastifyInstance, register: (scope: FastifyInstance) => void) => void;
+  const callbackPlugin: Plugin = (scope, register) => {
+    void scope.register((inner, _options, done) => {
+      projectScope(inner, { db: connection.db });
+      register(inner);
+      done();
     });
-    return app;
+  };
+  const asyncPlugin: Plugin = (scope, register) => {
+    void scope.register(async (inner) => {
+      projectScope(inner, { db: connection.db });
+      register(inner);
+      await Promise.resolve();
+    });
+  };
+
+  async function readyOutcome(plugin: Plugin, register: (scope: FastifyInstance) => void) {
+    const app = Fastify();
+    plugin(app, register);
+    const outcome = await app.ready().then(
+      () => "ready",
+      (error: Error) => error.message,
+    );
+    await app.close().catch(() => {});
+    return outcome;
   }
 
-  it("lets app.ready() resolve when every route has :projectId", async () => {
-    const app = appWithScope((scope) => {
-      scope.get("/api/projects/:projectId/things", () => ({}));
-    });
-    await expect(app.ready()).resolves.toBeDefined();
-    await app.close();
-  });
-
-  it("rejects app.ready() for a route without :projectId", async () => {
-    const app = appWithScope((scope) => {
-      scope.get("/api/things", () => ({}));
-    });
-    await expect(app.ready()).rejects.toThrow(/no :projectId/);
-    await app.close().catch(() => {});
-  });
-
-  it("also rejects a route with a different param name, and one in a child plugin", async () => {
-    const other = appWithScope((scope) => {
-      scope.get("/api/projects/:id", () => ({}));
-    });
-    await expect(other.ready()).rejects.toThrow(/no :projectId/);
-
-    const nested = appWithScope((scope) => {
-      void scope.register(async (child) => {
-        child.get("/api/things", () => ({}));
-        await Promise.resolve();
+  // A hang would stop the test at the timeout instead of settling
+  describe.each([
+    ["callback", callbackPlugin],
+    ["async", asyncPlugin],
+  ])("%s plugin", (_name, plugin) => {
+    it("lets ready() resolve when every route has :projectId", async () => {
+      const outcome = await readyOutcome(plugin, (scope) => {
+        scope.get("/api/projects/:projectId/things", () => ({}));
       });
+      expect(outcome).toBe("ready");
     });
-    await expect(nested.ready()).rejects.toThrow(/no :projectId/);
-    await other.close().catch(() => {});
-    await nested.close().catch(() => {});
+
+    it("rejects ready() for a route without :projectId, naming it once (not once per HEAD)", async () => {
+      const outcome = await readyOutcome(plugin, (scope) => {
+        scope.get("/api/things", () => ({}));
+      });
+      expect(outcome).toBe(BAD);
+    });
+
+    it("rejects a route with a different param name, listing every bad route", async () => {
+      const outcome = await readyOutcome(plugin, (scope) => {
+        scope.get("/api/projects/:id", () => ({}));
+        scope.post("/api/other", () => ({}));
+      });
+      expect(outcome).toContain("/api/projects/:id, /api/other");
+    });
+
+    it("rejects a route in a callback child plugin", async () => {
+      const outcome = await readyOutcome(plugin, (scope) => {
+        void scope.register((child, _options, done) => {
+          child.get("/api/things", () => ({}));
+          done();
+        });
+      });
+      expect(outcome).toBe(BAD);
+    });
+
+    it("rejects a route in an async child plugin", async () => {
+      const outcome = await readyOutcome(plugin, (scope) => {
+        void scope.register(async (child) => {
+          child.get("/api/things", () => ({}));
+          await Promise.resolve();
+        });
+      });
+      expect(outcome).toBe(BAD);
+    });
   });
 });
 

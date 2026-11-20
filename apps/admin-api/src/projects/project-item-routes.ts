@@ -33,14 +33,14 @@ export const projectItemRoutes: FastifyPluginCallbackZod<ProjectItemRoutesOption
         project.id,
         request.body.name,
       ).catch(nameConflictOrRethrow);
-      if (!renamed) throw projectNotFound(); // deleted since the scope check;
+      if (!renamed) throw projectNotFound(); // deleted since the scope check
       return toProjectResponse(renamed);
     },
   );
 
   app.delete("/api/projects/:projectId", async (request, reply) => {
     const deleted = await deleteProject(db, getAuthUser(request).id, getProject(request).id);
-    if (!deleted) throw projectNotFound(); // deleted since the scope check;
+    if (!deleted) throw projectNotFound(); // deleted since the scope check
     return reply.code(204).send();
   });
   done();

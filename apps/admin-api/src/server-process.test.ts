@@ -1,6 +1,8 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { testConfig } from "./testing/test-config.ts";
+import { testEnv } from "./testing/test-env.ts";
 
 const FIXTURE = fileURLToPath(new URL("./test-server.fixture.ts", import.meta.url));
 const LISTENING = /Server listening at http:\/\/127\.0\.0\.1:(\d+)/;
@@ -11,17 +13,16 @@ type Proc = {
 };
 const running: Proc[] = [];
 
-// Placeholder values for the vars config now requires; nothing connects to them yet
-const REQUIRED_ENV = {
-  DATABASE_URL: "postgres://placeholder@localhost:5432/placeholder",
-  BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret-0123",
-  BETTER_AUTH_URL: "http://localhost:8081",
-  DASHBOARD_ORIGIN: "http://localhost:5173",
-};
+// Env for the spawned server: fresh database, random secret
+let baseEnv: Record<string, string>;
+
+beforeAll(async () => {
+  baseEnv = testEnv(await testConfig());
+});
 
 function start(env: Record<string, string>): Proc {
   const child = spawn(process.execPath, [FIXTURE], {
-    env: { PATH: process.env.PATH ?? "", ADMIN_API_PORT: "0", ...REQUIRED_ENV, ...env },
+    env: { PATH: process.env.PATH ?? "", ...baseEnv, ...env },
   });
   let out = "";
   child.stdout.on("data", (d: Buffer) => (out += d.toString()));

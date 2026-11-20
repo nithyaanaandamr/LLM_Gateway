@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createDb } from "@gw/db";
 import Fastify, { type FastifyInstance } from "fastify";
 import {
   serializerCompiler,
@@ -22,6 +23,8 @@ export function buildApp(config: Config) {
   app.setErrorHandler(errorHandler);
   app.setNotFoundHandler(notFoundHandler);
   closeConnectionsAfterResponseOnShutdown(app);
+  const connection = createDb(config.databaseUrl);
+  app.addHook("onClose", () => connection.close());
   // `void`: plugins load later, on ready()/listen()/inject()
   void app.register(healthRoutes);
   return app;

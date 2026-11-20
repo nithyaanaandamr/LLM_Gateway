@@ -1,20 +1,18 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { buildApp, type App } from "./app.ts";
+import type { Config } from "./config.ts";
+import { testConfig } from "./testing/test-config.ts";
 
-// Placeholder auth values: buildApp doesn't read them yet (GW-017 W3 replaces this with testConfig())
-const config = {
-  port: 0,
-  host: "127.0.0.1",
-  logLevel: "silent",
-  databaseUrl: "postgres://placeholder@localhost:5432/placeholder",
-  authSecret: "test-secret-test-secret-test-secret-0123",
-  authBaseUrl: "http://localhost:8081",
-  dashboardOrigin: "http://localhost:5173",
-} as const;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
+let config: Config;
 let app: App;
+
+beforeAll(async () => {
+  config = await testConfig();
+});
+
 afterEach(async () => {
   await app.close();
 });

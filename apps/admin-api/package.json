@@ -12,6 +12,8 @@
     "test": "tsc -b tsconfig.build.json && vitest run"
   },
   "dependencies": {
+    "@gw/auth": "workspace:*",
+    "@gw/db": "workspace:*",
     "fastify": "^5.12.7",
     "fastify-type-provider-zod": "^7.0.0",
     "zod": "^4.6.7"

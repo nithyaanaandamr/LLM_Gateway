@@ -196,6 +196,12 @@ importers:
 
   apps/admin-api:
     dependencies:
+      '@gw/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@gw/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       fastify:
         specifier: ^5.12.7
         version: 5.12.7

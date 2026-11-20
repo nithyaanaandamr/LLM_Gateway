@@ -56,6 +56,20 @@ describe("toAuthError", () => {
     expect(error).toMatchObject({ statusCode: 422, code: "BAD_REQUEST", message: "Failed" });
   });
 
+  it.each([
+    [409, "CONFLICT"],
+    [413, "PAYLOAD_TOO_LARGE"],
+    [415, "UNSUPPORTED_MEDIA_TYPE"],
+  ])("gives status %i the same code as everywhere else: %s", async (status, code) => {
+    const error = await appErrorFor(jsonResponse(status, { message: "Some message" }));
+    expect(error).toMatchObject({ statusCode: status, code });
+  });
+
+  it.each([200, 302])("treats status %i as unexpected: a plain Error", async (status) => {
+    const error = await toAuthError(new Response("{}", { status }));
+    expect(error).not.toBeInstanceOf(AppError);
+  });
+
   it("uses a message based on the status for a non-JSON body", async () => {
     const error = await appErrorFor(new Response("<html>nope</html>", { status: 403 }));
     expect(error).toMatchObject({ statusCode: 403, code: "FORBIDDEN", message: "Forbidden" });

@@ -1,8 +1,11 @@
 import { CLIENT_IP_HEADER, createAuth } from "@gw/auth";
 import { createDb, type DbConnection } from "@gw/db";
+import { connect } from "node:net";
 import Fastify, { type FastifyInstance, type InjectOptions } from "fastify";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { Config } from "../config.ts";
+import { errorHandler } from "../error-handler.ts";
+import { AppError } from "../errors.ts";
 import { testConfig } from "../testing/test-config.ts";
 import { sendWebResponse } from "./send-web-response.ts";
 import { toWebRequest } from "./to-web-request.ts";
@@ -74,6 +77,16 @@ describe("toWebRequest", () => {
     expect(seen.headers[CLIENT_IP_HEADER]).toBe("10.9.8.7");
   });
 
+  it("replaces a client-sent client IP header when the connection is IPv6", async () => {
+    const seen = await seenFor({
+      method: "GET",
+      url: "/x",
+      remoteAddress: "2001:db8::1",
+      headers: { [CLIENT_IP_HEADER]: "1.2.3.4" },
+    });
+    expect(seen.headers[CLIENT_IP_HEADER]).toBe("2001:db8::1");
+  });
+
   it("sets the client IP header when the client sent none", async () => {
     const seen = await seenFor({ method: "GET", url: "/x", remoteAddress: "10.9.8.6" });
     expect(seen.headers[CLIENT_IP_HEADER]).toBe("10.9.8.6");
@@ -103,6 +116,40 @@ describe("toWebRequest", () => {
   it("gives a GET no body", async () => {
     const seen = await seenFor({ method: "GET", url: "/x" });
     expect(seen.body).toBeNull();
+  });
+});
+
+describe("toWebRequest with an absolute-form request line", () => {
+  const request = { method: "GET", headers: {}, body: undefined, ip: "10.0.0.1" };
+
+  it("throws a 400 AppError when the URL is not a path", () => {
+    const attempt = () => toWebRequest({ ...request, url: "http://evil.example/x" }, BASE_URL);
+    expect(attempt).toThrow(AppError);
+    expect(attempt).toThrow(expect.objectContaining({ statusCode: 400, code: "BAD_REQUEST" }));
+  });
+
+  // light-my-request rewrites absolute URLs, so this one goes over a real socket
+  it("answers 400 in our error shape over a real connection", async () => {
+    const app = Fastify();
+    app.setErrorHandler(errorHandler);
+    app.all("*", (req) => ({ url: toWebRequest(req, BASE_URL).url }));
+    await app.listen({ port: 0, host: "127.0.0.1" });
+    const address = app.server.address();
+    const port = typeof address === "object" && address !== null ? address.port : 0;
+
+    const raw = await new Promise<string>((resolve) => {
+      let received = "";
+      const socket = connect(port, "127.0.0.1");
+      socket.on("data", (chunk) => (received += chunk.toString()));
+      socket.on("close", () => resolve(received));
+      socket.write(
+        "GET http://evil.example/api/auth/x HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+      );
+    });
+    await app.close();
+
+    expect(raw.startsWith("HTTP/1.1 400")).toBe(true);
+    expect(raw).toContain('"code":"BAD_REQUEST"');
   });
 });
 

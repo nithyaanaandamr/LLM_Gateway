@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AppError, type ErrorCode } from "../errors.ts";
+import { AppError, CODE_BY_STATUS } from "../errors.ts";
 
 // What Better Auth sends on an error; both fields are optional because we don't control them
 const betterAuthErrorBody = z.object({
@@ -11,14 +11,6 @@ const betterAuthErrorBody = z.object({
 const USER_EXISTS = "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL";
 const VALIDATION_ERROR = "VALIDATION_ERROR";
 
-const CODE_BY_STATUS: Record<number, ErrorCode> = {
-  400: "BAD_REQUEST",
-  401: "UNAUTHORIZED",
-  403: "FORBIDDEN",
-  404: "NOT_FOUND",
-  429: "RATE_LIMITED",
-};
-
 const MESSAGE_BY_STATUS: Record<number, string> = {
   400: "Bad request",
   401: "Unauthorized",
@@ -28,10 +20,11 @@ const MESSAGE_BY_STATUS: Record<number, string> = {
 };
 
 // Better Auth error Response -> an Error for our error handler (throw it).
-// 4xx become an AppError with Better Auth's message (safe to show). 5xx become a plain Error:
-// the handler logs it and the client gets the generic 500, never the body.
+// 4xx become an AppError with Better Auth's message (safe to show). 5xx and non-error statuses
+// become a plain Error: the handler logs it and the client gets the generic 500, never the body.
 export async function toAuthError(response: Response): Promise<Error> {
-  if (response.status >= 500) {
+  // 5xx, or a status that is not an error at all: both are unexpected here
+  if (response.status >= 500 || response.status < 400) {
     return new Error(`Better Auth responded with ${response.status}`);
   }
   const { message, code } = await readBody(response);

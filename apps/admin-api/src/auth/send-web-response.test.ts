@@ -59,4 +59,21 @@ describe("sendWebResponse", () => {
     );
     expect(res.headers["content-length"]).toBe("5");
   });
+
+  it("does not copy framing or connection headers from the original response", async () => {
+    const res = await injectResponse(
+      () =>
+        new Response("hello", {
+          headers: {
+            "transfer-encoding": "chunked",
+            connection: "keep-alive",
+            "keep-alive": "timeout=5",
+          },
+        }),
+    );
+    expect(res.headers["transfer-encoding"]).toBeUndefined();
+    expect(res.headers["keep-alive"]).toBeUndefined();
+    expect(res.headers["content-length"]).toBe("5");
+    expect(res.body).toBe("hello");
+  });
 });

@@ -27,13 +27,9 @@ describe("project collection routes", () => {
     await connection.close();
   });
 
-  const post = (cookie: string, payload?: Record<string, unknown>) =>
-    apiRequest(app, config, {
-      method: "POST",
-      url: "/api/projects",
-      cookie,
-      ...(payload && { payload }),
-    });
+  // payload undefined: no body; null, arrays and numbers are sent as JSON
+  const post = (cookie: string, payload?: unknown) =>
+    apiRequest(app, config, { method: "POST", url: "/api/projects", cookie, payload });
 
   const list = (cookie: string) =>
     apiRequest(app, config, { method: "GET", url: "/api/projects", cookie });
@@ -82,6 +78,79 @@ describe("project collection routes", () => {
       ["a number", { name: 5 }],
       ["missing", {}],
     ])("rejects a name that is %s: 400 VALIDATION_FAILED, nothing stored", async (_label, body) => {
+      const { cookie, userId } = await signUpUser(app, config);
+
+      const res = await post(cookie, body);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json<ErrorJson>().error.code).toBe("VALIDATION_FAILED");
+      expect(await namesOf(userId)).toEqual([]);
+    });
+
+    it.each([
+      ["a NUL byte", "a\u0000b"],
+      ["a newline inside", "a\nb"],
+      ["a trailing newline", "Prod\n"],
+      ["a tab", "a\tb"],
+      ["a BEL character", "a\u0007b"],
+      ["a bidi override (RLO)", "a\u202Eb"],
+      ["a bidi isolate (LRI)", "a\u2066b"],
+    ])("rejects a name with %s: 400 VALIDATION_FAILED, not a 500", async (_label, name) => {
+      const { cookie, userId } = await signUpUser(app, config);
+
+      const res = await post(cookie, { name });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json<ErrorJson>().error.code).toBe("VALIDATION_FAILED");
+      expect(await namesOf(userId)).toEqual([]);
+    });
+
+    it.each([
+      ["a ZWJ emoji", "👨\u200D👩\u200D👧 team"],
+      ["a Persian name with ZWNJ", "می\u200Cخواهم"],
+      ["an accented name", "café"],
+    ])("accepts %s", async (_label, name) => {
+      const { cookie } = await signUpUser(app, config);
+      const res = await post(cookie, { name });
+      expect(res.statusCode).toBe(201);
+      expect(res.json<ProjectJson>().name).toBe(name);
+    });
+
+    it("normalizes to NFC: NFD and NFC café are the same name", async () => {
+      const { cookie, userId } = await signUpUser(app, config);
+      const nfd = "cafe\u0301";
+      const nfc = "caf\u00E9";
+
+      const first = await post(cookie, { name: nfd });
+      const second = await post(cookie, { name: nfc });
+
+      expect(first.statusCode).toBe(201);
+      expect(first.json<ProjectJson>().name).toBe(nfc);
+      expect(second.statusCode).toBe(409);
+      expect(await namesOf(userId)).toEqual([nfc]);
+    });
+
+    it("measures the length after NFC: 100 decomposed é is accepted, 101 is not", async () => {
+      const { cookie } = await signUpUser(app, config);
+
+      expect((await post(cookie, { name: "e\u0301".repeat(100) })).statusCode).toBe(201);
+      expect((await post(cookie, { name: "e\u0301".repeat(101) })).statusCode).toBe(400);
+    });
+
+    it("counts code points like Postgres: 100 emoji are accepted, 101 are not", async () => {
+      const { cookie, userId } = await signUpUser(app, config);
+
+      expect((await post(cookie, { name: "😀".repeat(100) })).statusCode).toBe(201);
+      expect((await post(cookie, { name: "😀".repeat(101) })).statusCode).toBe(400);
+      expect(await namesOf(userId)).toEqual(["😀".repeat(100)]);
+    });
+
+    it.each([
+      ["an array", [{ name: "Prod" }]],
+      ["null", null],
+      ["a number", 5],
+      ["a string", "Prod"],
+    ])("rejects a body that is %s: 400 in our shape", async (_label, body) => {
       const { cookie, userId } = await signUpUser(app, config);
 
       const res = await post(cookie, body);
@@ -144,7 +213,7 @@ describe("project collection routes", () => {
     it("answers 409 for the 101st project, and the cap is per user", async () => {
       const { cookie, userId } = await signUpUser(app, config);
       for (let n = 1; n <= 100; n++) {
-        await insertProject(connection.db, { ownerId: userId, name: `p${n}` });
+        await insertProject(connection.db, userId, `p${n}`);
       }
 
       const res = await post(cookie, { name: "one-too-many" });

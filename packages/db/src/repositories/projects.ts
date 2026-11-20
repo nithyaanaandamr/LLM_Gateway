@@ -1,22 +1,22 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import type { Database } from "../client.ts";
 import { projects } from "../schema/index.ts";
 import { accessibleProjects } from "./project-access.ts";
 
+export { insertProject, isProjectNameTaken } from "./insert-project.ts";
+
 export type Project = typeof projects.$inferSelect;
 
-// The only write that names the owner. Callers pass the logged-in user's ID, never a body field.
-export async function insertProject(
-  db: Database,
-  values: { ownerId: string; name: string },
-): Promise<Project> {
-  const [project] = await db.insert(projects).values(values).returning();
-  if (!project) throw new Error("insert into projects returned no row");
-  return project;
-}
-
+// COLLATE "C" sorts by bytes, so the order is the same on every Postgres. The database's
+// default collation differs between installs (Alpine: bytes, glibc: a, A, b, B).
+// Names are unique per owner, so name alone is a total order; id is a harmless tie-break.
+// see PITFALLS.md: List order must not depend on the collation
 export function listAccessibleProjects(db: Database, userId: string): Promise<Project[]> {
-  return db.select().from(projects).where(accessibleProjects(userId)).orderBy(asc(projects.name));
+  return db
+    .select()
+    .from(projects)
+    .where(accessibleProjects(userId))
+    .orderBy(sql`${projects.name} collate "C"`, asc(projects.id));
 }
 
 // undefined for someone else's project and for a missing one: the caller can't tell them apart
@@ -36,25 +36,31 @@ export function countAccessibleProjects(db: Database, userId: string): Promise<n
   return db.$count(projects, accessibleProjects(userId));
 }
 
-// Callers must have checked access first (findAccessibleProject). Returns the updated row.
+// Checks access itself, so it is safe even if a caller skips findAccessibleProject.
+// Returns the updated row, or undefined for someone else's project or a missing one.
 export async function renameProject(
   db: Database,
+  userId: string,
   projectId: string,
   name: string,
 ): Promise<Project | undefined> {
   const [project] = await db
     .update(projects)
     .set({ name })
-    .where(eq(projects.id, projectId))
+    .where(and(accessibleProjects(userId), eq(projects.id, projectId)))
     .returning();
   return project;
 }
 
-// Callers must have checked access first. True if a row was deleted.
-export async function deleteProject(db: Database, projectId: string): Promise<boolean> {
+// Checks access itself. True if a row was deleted; false for someone else's project or a missing one.
+export async function deleteProject(
+  db: Database,
+  userId: string,
+  projectId: string,
+): Promise<boolean> {
   const deleted = await db
     .delete(projects)
-    .where(eq(projects.id, projectId))
+    .where(and(accessibleProjects(userId), eq(projects.id, projectId)))
     .returning({ id: projects.id });
   return deleted.length > 0;
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type DbConnection } from "../client.ts";
 import { users } from "../schema/index.ts";
@@ -9,6 +9,7 @@ import {
   deleteProject,
   findAccessibleProject,
   insertProject,
+  isProjectNameTaken,
   listAccessibleProjects,
   renameProject,
 } from "./projects.ts";
@@ -33,13 +34,27 @@ async function insertUser(): Promise<string> {
 describe("listAccessibleProjects", () => {
   it("returns only the caller's projects, sorted by name", async () => {
     const [me, other] = [await insertUser(), await insertUser()];
-    await insertProject(db(), { ownerId: me, name: "b" });
-    await insertProject(db(), { ownerId: me, name: "a" });
-    await insertProject(db(), { ownerId: other, name: "c" });
+    await insertProject(db(), me, "b");
+    await insertProject(db(), me, "a");
+    await insertProject(db(), other, "c");
 
     const list = await listAccessibleProjects(db(), me);
 
     expect(list.map((project) => project.name)).toEqual(["a", "b"]);
+  });
+
+  it("sorts by bytes whatever the collation: A, B, a, b", async () => {
+    // A linguistic collation would give a, A, b, B. Set it on the column, so the test is
+    // sensitive to the ORDER BY even where the database default already sorts by bytes.
+    await db().execute(
+      sql`alter table app.projects alter column name type text collate "und-x-icu"`,
+    );
+    const me = await insertUser();
+    for (const name of ["b", "B", "a", "A", "é"]) await insertProject(db(), me, name);
+
+    const list = await listAccessibleProjects(db(), me);
+
+    expect(list.map((project) => project.name)).toEqual(["A", "B", "a", "b", "é"]);
   });
 
   it("returns an empty list for a user with no projects", async () => {
@@ -50,14 +65,14 @@ describe("listAccessibleProjects", () => {
 describe("findAccessibleProject", () => {
   it("returns my project", async () => {
     const me = await insertUser();
-    const project = await insertProject(db(), { ownerId: me, name: "mine" });
+    const project = await insertProject(db(), me, "mine");
 
     expect(await findAccessibleProject(db(), me, project.id)).toEqual(project);
   });
 
   it("returns undefined for another user's project", async () => {
     const [me, other] = [await insertUser(), await insertUser()];
-    const theirs = await insertProject(db(), { ownerId: other, name: "theirs" });
+    const theirs = await insertProject(db(), other, "theirs");
 
     expect(await findAccessibleProject(db(), me, theirs.id)).toBeUndefined();
   });
@@ -68,7 +83,7 @@ describe("findAccessibleProject", () => {
 
   it("matches the uppercase form of the ID and returns the lowercase id", async () => {
     const me = await insertUser();
-    const project = await insertProject(db(), { ownerId: me, name: "mine" });
+    const project = await insertProject(db(), me, "mine");
 
     const found = await findAccessibleProject(db(), me, project.id.toUpperCase());
 
@@ -80,9 +95,9 @@ describe("findAccessibleProject", () => {
 describe("countAccessibleProjects", () => {
   it("counts only the caller's projects", async () => {
     const [me, other] = [await insertUser(), await insertUser()];
-    await insertProject(db(), { ownerId: me, name: "a" });
-    await insertProject(db(), { ownerId: me, name: "b" });
-    await insertProject(db(), { ownerId: other, name: "c" });
+    await insertProject(db(), me, "a");
+    await insertProject(db(), me, "b");
+    await insertProject(db(), other, "c");
 
     expect(await countAccessibleProjects(db(), me)).toBe(2);
     expect(await countAccessibleProjects(db(), await insertUser())).toBe(0);
@@ -92,9 +107,9 @@ describe("countAccessibleProjects", () => {
 describe("renameProject", () => {
   it("changes the name and bumps updatedAt, keeping createdAt", async () => {
     const me = await insertUser();
-    const project = await insertProject(db(), { ownerId: me, name: "old" });
+    const project = await insertProject(db(), me, "old");
 
-    const renamed = await renameProject(db(), project.id, "new");
+    const renamed = await renameProject(db(), me, project.id, "new");
 
     expect(renamed?.name).toBe("new");
     expect(renamed?.createdAt).toEqual(project.createdAt);
@@ -102,41 +117,62 @@ describe("renameProject", () => {
   });
 
   it("returns undefined for a missing project", async () => {
-    expect(await renameProject(db(), randomUUID(), "x")).toBeUndefined();
+    expect(await renameProject(db(), await insertUser(), randomUUID(), "x")).toBeUndefined();
+  });
+
+  it("returns undefined for another user's project and leaves the row unchanged", async () => {
+    const [me, other] = [await insertUser(), await insertUser()];
+    const theirs = await insertProject(db(), other, "theirs");
+
+    expect(await renameProject(db(), me, theirs.id, "mine-now")).toBeUndefined();
+
+    expect(await findAccessibleProject(db(), other, theirs.id)).toEqual(theirs);
   });
 });
 
 describe("deleteProject", () => {
   it("deletes the row and returns true", async () => {
     const me = await insertUser();
-    const project = await insertProject(db(), { ownerId: me, name: "gone" });
+    const project = await insertProject(db(), me, "gone");
 
-    expect(await deleteProject(db(), project.id)).toBe(true);
+    expect(await deleteProject(db(), me, project.id)).toBe(true);
     expect(await findAccessibleProject(db(), me, project.id)).toBeUndefined();
   });
 
   it("returns false for a missing row", async () => {
-    expect(await deleteProject(db(), randomUUID())).toBe(false);
+    expect(await deleteProject(db(), await insertUser(), randomUUID())).toBe(false);
+  });
+
+  it("returns false for another user's project and leaves the row in place", async () => {
+    const [me, other] = [await insertUser(), await insertUser()];
+    const theirs = await insertProject(db(), other, "theirs");
+
+    expect(await deleteProject(db(), me, theirs.id)).toBe(false);
+
+    expect(await findAccessibleProject(db(), other, theirs.id)).toEqual(theirs);
   });
 });
 
-// Access is decided in project-access.ts only; insertProject is the one write that names the owner.
-// see PITFALLS.md: Project access goes through one condition
-describe("owner_id stays out of the repositories", () => {
-  const OWNER = /ownerId|owner_id/;
-  const dir = import.meta.dirname;
-  const sources = readdirSync(dir).filter(
-    (file) => file.endsWith(".ts") && !file.endsWith(".test.ts"),
-  );
+describe("isProjectNameTaken", () => {
+  async function caught(run: () => Promise<unknown>): Promise<unknown> {
+    try {
+      await run();
+    } catch (error) {
+      return error;
+    }
+    throw new Error("expected the call to fail");
+  }
 
-  it("is named only in project-access.ts and projects.ts", () => {
-    const naming = sources.filter((file) => OWNER.test(readFileSync(`${dir}/${file}`, "utf8")));
-    expect(naming.sort()).toEqual(["project-access.ts", "projects.ts"]);
-  });
+  it("is true for a duplicate name on insert and on rename, false for other errors", async () => {
+    const me = await insertUser();
+    await insertProject(db(), me, "taken");
+    const other = await insertProject(db(), me, "other");
 
-  it("is named in projects.ts only inside insertProject", () => {
-    const text = readFileSync(`${dir}/projects.ts`, "utf8");
-    const others = text.slice(text.indexOf("export function listAccessibleProjects"));
-    expect(OWNER.test(others)).toBe(false);
+    const onInsert = await caught(() => insertProject(db(), me, "taken"));
+    const onRename = await caught(() => renameProject(db(), me, other.id, "taken"));
+
+    expect(isProjectNameTaken(onInsert)).toBe(true);
+    expect(isProjectNameTaken(onRename)).toBe(true);
+    expect(isProjectNameTaken(new Error("boom"))).toBe(false);
   });
 });

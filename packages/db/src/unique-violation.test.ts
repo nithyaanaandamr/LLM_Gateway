@@ -34,15 +34,15 @@ async function caught(run: () => Promise<unknown>): Promise<unknown> {
 
 describe("isUniqueViolation", () => {
   it("is true for a duplicate (owner_id, name) insert", async () => {
-    await insertProject(connection.db, { ownerId, name: "dup" });
+    await insertProject(connection.db, ownerId, "dup");
 
-    const error = await caught(() => insertProject(connection.db, { ownerId, name: "dup" }));
+    const error = await caught(() => insertProject(connection.db, ownerId, "dup"));
 
     expect(isUniqueViolation(error, NAME_CONSTRAINT)).toBe(true);
   });
 
   it("is false for another unique constraint (the primary key)", async () => {
-    const first = await insertProject(connection.db, { ownerId, name: "pk" });
+    const first = await insertProject(connection.db, ownerId, "pk");
 
     const error = await caught(() =>
       connection.db.insert(projects).values({ id: first.id, ownerId, name: "pk2" }),

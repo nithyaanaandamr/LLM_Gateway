@@ -25,6 +25,7 @@ export async function createProject(
     cookie,
     payload: { name },
   });
-  if (res.statusCode !== 201) throw new Error(`create project failed: ${res.statusCode}`);
+  if (res.statusCode !== 201)
+    throw new Error(`create project failed: ${res.statusCode} ${res.body}`);
   return res.json<ProjectJson>();
 }

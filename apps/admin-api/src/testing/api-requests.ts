@@ -8,8 +8,9 @@ export interface ApiRequest {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   url: string;
   cookie?: string;
-  // Loosely typed on purpose: tests send wrong types and unknown keys
-  payload?: Record<string, unknown>;
+  // Any JSON value, sent as a JSON body. Loosely typed on purpose: tests send arrays,
+  // null, numbers, wrong types and unknown keys
+  payload?: unknown;
   // undefined: send the dashboard origin; null: send no Origin header
   origin?: string | null;
 }
@@ -23,10 +24,11 @@ export function apiRequest(
   return app.inject({
     method: request.method,
     url: request.url,
-    ...(request.payload === undefined ? {} : { payload: request.payload }),
+    ...(request.payload === undefined ? {} : { payload: JSON.stringify(request.payload) }),
     remoteAddress: uniqueIp(),
     headers: headersFor(config, {
       ...(request.cookie === undefined ? {} : { cookie: request.cookie }),
+      ...(request.payload === undefined ? {} : { headers: { "content-type": "application/json" } }),
       ...(request.origin === undefined ? {} : { origin: request.origin }),
     }),
   });

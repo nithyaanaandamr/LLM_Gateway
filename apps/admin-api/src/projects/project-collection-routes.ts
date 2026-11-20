@@ -1,7 +1,7 @@
 import {
   countAccessibleProjects,
   insertProject,
-  isUniqueViolation,
+  isProjectNameTaken,
   listAccessibleProjects,
   type Database,
   type Project,
@@ -17,8 +17,6 @@ import {
   toProjectResponse,
 } from "./project-schemas.ts";
 
-const NAME_CONSTRAINT = "projects_owner_id_name_unique";
-
 export interface ProjectCollectionRoutesOptions {
   db: Database;
 }
@@ -31,9 +29,9 @@ async function createProjectFor(db: Database, userId: string, name: string): Pro
     throw new AppError(409, "CONFLICT", `Project limit reached (${MAX_PROJECTS_PER_USER})`);
   }
   try {
-    return await insertProject(db, { ownerId: userId, name });
+    return await insertProject(db, userId, name);
   } catch (error) {
-    if (isUniqueViolation(error, NAME_CONSTRAINT)) {
+    if (isProjectNameTaken(error)) {
       throw new AppError(409, "CONFLICT", "A project with this name already exists");
     }
     throw error;

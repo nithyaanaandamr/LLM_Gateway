@@ -49,6 +49,8 @@ Unsafe methods (POST, PUT, PATCH, DELETE) need an `Origin` header from the trust
 2. In the handler, call `getAuthUser(request)` to get the logged-in user.
 3. Never register a route that needs login outside that scope: `getAuthUser` throws there (a logged 500).
 
+`src/route-inventory.test.ts` enforces this: it lists every route `buildApp` registers and expects 401 from each one without a session, except an allowlist of public routes (`PUBLIC_ROUTES` in that test). A new **public** route must be added to that list on purpose; a route registered outside the protected scope by mistake fails the build. Path params such as `:id` are filled with a dummy UUID, so new routes need no test edits.
+
 ### Testing with auth
 
 Helpers are in `src/testing/auth-requests.ts` (test-only, not built):

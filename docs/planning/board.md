@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-014 | App schema and migrations | 1 | Tables from GW-012 exist via migration; log tables in separate `logs` schema (ADR 0007); minimal Better Auth config generates the `auth` tables (routes are GW-017) |
 
 ## Ready
 
@@ -52,3 +51,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-015 | Crypto and key helpers in `shared` | 1 | 2026-10-31 |
 | GW-016 | Admin API skeleton | 1 | 2026-10-31 |
 | GW-026 | Board bot rebuilds its branch instead of merging main | 0 | 2026-10-31 |
+| GW-014 | App schema and migrations | 1 | 2026-11-20 |

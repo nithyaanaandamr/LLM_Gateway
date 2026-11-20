@@ -132,6 +132,17 @@ describe("auth routes", () => {
       }
     });
 
+    it("accepts an email of 254 characters and rejects one of 255", async () => {
+      const emailOfLength = (length: number) => `${"a".repeat(length - 12)}@example.com`;
+
+      const ok = await signUp(app, config, { ...valid, email: emailOfLength(254) });
+      const tooLong = await signUp(app, config, { ...valid, email: emailOfLength(255) });
+
+      expect(ok.statusCode).toBe(200);
+      expect(tooLong.statusCode).toBe(400);
+      expect(tooLong.json<ErrorJson>().error.details?.map((d) => d.path)).toContain("body.email");
+    });
+
     it("rejects unknown keys on sign-up and sign-in", async () => {
       const up = await signUp(app, config, {
         ...valid,
@@ -197,6 +208,19 @@ describe("auth routes", () => {
       expect((await attempt(uniqueIp())).statusCode).toBe(401);
     });
 
+    it("sends a numeric Retry-After header with the 429", async () => {
+      const remoteAddress = uniqueIp();
+      const attempt = () =>
+        signIn(app, config, { email: newEmail(), password: "wrong-password" }, { remoteAddress });
+      for (let i = 0; i < 3; i++) await attempt();
+
+      const limited = await attempt();
+
+      expect(limited.statusCode).toBe(429);
+      expect(limited.headers["retry-after"]).toMatch(/^\d+$/);
+      expect(limited.json<ErrorJson>().error.code).toBe("RATE_LIMITED");
+    });
+
     it("ignores a client-sent x-gw-client-ip header when counting attempts", async () => {
       const remoteAddress = uniqueIp();
       const statuses = [];
@@ -227,6 +251,14 @@ describe("auth routes", () => {
     });
   });
 
+  describe("get-session query", () => {
+    it("rejects unknown query parameters", async () => {
+      const res = await app.inject({ method: "GET", url: "/api/auth/get-session?x=1" });
+      expect(res.statusCode).toBe(400);
+      expect(res.json<ErrorJson>().error.code).toBe("VALIDATION_FAILED");
+    });
+  });
+
   describe("sign-out", () => {
     it("clears the cookie and deletes the session row", async () => {
       const { email, cookie } = await signedUp();
@@ -250,6 +282,38 @@ describe("auth routes", () => {
           .where(eq(sessions.userId, user?.id ?? "")),
       ).toHaveLength(0);
       expect((await getSession(app, config, { cookie })).json()).toBeNull();
+    });
+
+    it("works with no body at all and with a JSON null body", async () => {
+      for (const payload of [undefined, "null"]) {
+        const { cookie } = await signedUp();
+        const res = await app.inject({
+          method: "POST",
+          url: "/api/auth/sign-out",
+          remoteAddress: uniqueIp(),
+          headers: {
+            origin: config.dashboardOrigin,
+            cookie,
+            ...(payload === undefined ? {} : { "content-type": "application/json" }),
+          },
+          ...(payload === undefined ? {} : { payload }),
+        });
+        expect(res.statusCode).toBe(200);
+        expect((await getSession(app, config, { cookie })).json()).toBeNull();
+      }
+    });
+
+    it("rejects a body with unknown keys", async () => {
+      const { cookie } = await signedUp();
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/auth/sign-out",
+        remoteAddress: uniqueIp(),
+        headers: { origin: config.dashboardOrigin, cookie },
+        payload: { a: 1 },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json<ErrorJson>().error.code).toBe("VALIDATION_FAILED");
     });
 
     it("answers 403 FORBIDDEN in our shape with no Origin or a hostile Origin", async () => {
@@ -282,5 +346,33 @@ describe("auth routes", () => {
       expect(res.statusCode).toBe(404);
       expect(res.json<ErrorJson>().error.code).toBe("NOT_FOUND");
     });
+  });
+});
+
+describe("auth routes on an https base URL", () => {
+  let config: Config;
+  let app: App;
+
+  beforeAll(async () => {
+    config = await testConfig({ authBaseUrl: "https://admin.example.com" });
+    app = buildApp(config);
+  });
+
+  afterAll(() => app.close());
+
+  it("sets a __Secure- prefixed, Secure, HttpOnly session cookie", async () => {
+    const res = await signUp(app, config, {
+      name: "Ada",
+      email: "https@example.com",
+      password: TEST_PASSWORD,
+    });
+
+    const cookies = [res.headers["set-cookie"]].flat().map(String);
+    const session = cookies.find((value) =>
+      value.startsWith("__Secure-better-auth.session_token="),
+    );
+    expect(session).toMatch(/; Secure/i);
+    expect(session).toMatch(/HttpOnly/i);
+    expect(session).toMatch(/SameSite=Lax/i);
   });
 });

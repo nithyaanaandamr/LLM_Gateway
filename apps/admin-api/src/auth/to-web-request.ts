@@ -33,6 +33,7 @@ function webHeaders(request: IncomingRequest): Headers {
 function webBody(request: IncomingRequest): string | null {
   // new Request throws on a GET or HEAD with a body
   if (request.method === "GET" || request.method === "HEAD") return null;
-  if (request.body === undefined) return null;
+  // no body, or a JSON null: nothing to forward
+  if (request.body === undefined || request.body === null) return null;
   return JSON.stringify(request.body);
 }

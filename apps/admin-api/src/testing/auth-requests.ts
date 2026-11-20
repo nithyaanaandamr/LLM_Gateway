@@ -71,11 +71,14 @@ export function getSession(app: App, config: Config, options: RequestOptions = {
   });
 }
 
+const SESSION_COOKIE = /^(__Secure-)?better-auth\.session_token=/;
+
 // "name=value" of the session cookie, ready to send back as a Cookie header.
-// The name is not hard-coded: it gets a __Secure- prefix on https.
+// Picked by name (not position); the name gets a __Secure- prefix on https.
 export function cookieFrom(response: LightMyRequestResponse): string {
   const setCookie = response.headers["set-cookie"];
-  const first = Array.isArray(setCookie) ? setCookie[0] : setCookie;
-  if (!first) throw new Error("response has no Set-Cookie");
-  return first.split(";")[0] ?? "";
+  const all = Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : [];
+  const session = all.find((value) => SESSION_COOKIE.test(value));
+  if (!session) throw new Error("response has no session cookie");
+  return session.split(";")[0] ?? "";
 }

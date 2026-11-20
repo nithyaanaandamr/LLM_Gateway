@@ -14,23 +14,34 @@ export interface AuthRoutesOptions {
 // Unknown keys are rejected on every body and query: Better Auth would accept extras
 // (image, callbackURL, ...) and we re-serialize exactly what passed our check.
 // Password length rules stay in Better Auth (min and max in createAuth).
+const emailField = z.email().max(254);
 const signUpBody = z.strictObject({
   name: z.string().trim().min(1).max(100),
-  email: z.email().max(254),
+  email: emailField,
   password: z.string(),
 });
-const signInBody = z.strictObject({ email: z.email().max(254), password: z.string() });
-// Optional: a client may send no body at all
-const signOutBody = z.strictObject({}).optional();
+const signInBody = z.strictObject({ email: emailField, password: z.string() });
+// A client may send no body at all, or a JSON null
+const signOutBody = z.strictObject({}).nullish();
 const noQuery = z.strictObject({});
 
 // Sends the request through Better Auth (origin check, rate limit, password check all run there)
 function forwardTo({ auth, baseUrl }: AuthRoutesOptions) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const response = await auth.handler(toWebRequest(request, baseUrl));
-    if (response.status >= 400) throw await toAuthError(response);
+    if (response.status >= 400) {
+      copyRetryAfter(response, reply);
+      throw await toAuthError(response);
+    }
     return sendWebResponse(reply, response);
   };
+}
+
+// Better Auth sends X-Retry-After (seconds) on a 429; the standard name is Retry-After.
+// The header set here survives the error handler.
+function copyRetryAfter(response: Response, reply: FastifyReply): void {
+  const seconds = response.headers.get("x-retry-after");
+  if (response.status === 429 && seconds !== null) reply.header("retry-after", seconds);
 }
 
 // Only the endpoints we use are exposed; every other /api/auth/* path is a 404

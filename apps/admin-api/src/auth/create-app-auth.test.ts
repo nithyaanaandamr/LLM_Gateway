@@ -27,6 +27,16 @@ describe("pinoAuthLog", () => {
     expect(parsed()).toEqual([expect.objectContaining({ level: 40, msg: "Invalid password" })]);
   });
 
+  it("drops extra arguments when there is no Error", async () => {
+    const { app, parsed } = loggerWithOutput();
+
+    pinoAuthLog(app.log)("warn", "Odd request", { email: "SENTINEL@example.com" }, "SENTINEL_TEXT");
+    await app.close();
+
+    expect(parsed()).toEqual([expect.objectContaining({ level: 40, msg: "Odd request" })]);
+    expect(JSON.stringify(parsed())).not.toContain("SENTINEL");
+  });
+
   it("keeps an Error but drops other arguments, which can hold request data", async () => {
     const { app, parsed } = loggerWithOutput();
 

@@ -63,6 +63,7 @@ describe("errorForLog", () => {
   });
 
   it("still finds a query error at the last inspected depth", () => {
+    // code is undefined: the cause that holds it sits one level past the cap, so it is not read
     let deep: Error = queryError(connectionRefused());
     for (let i = 0; i < 4; i++) deep = new Error("wrapper", { cause: deep });
 

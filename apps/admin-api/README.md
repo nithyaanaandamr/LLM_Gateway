@@ -36,8 +36,8 @@ Each task adds its vars here.
 |---|---|---|---|
 | GET | `/health` | nothing | `{ "status": "ok" }` while the process is up (liveness) |
 | POST | `/api/auth/sign-up/email` | nothing | `{ token, user }` and a session cookie |
-| POST | `/api/auth/sign-in/email` | nothing | `{ token, user, redirect, url }` and a session cookie |
-| POST | `/api/auth/sign-out` | cookie and trusted `Origin` | `{ success: true }` and a clearing cookie |
+| POST | `/api/auth/sign-in/email` | nothing | `{ redirect, token, user }` and a session cookie |
+| POST | `/api/auth/sign-out` | trusted `Origin` (cookie to end a session) | `{ success: true }` and a clearing cookie; with no cookie it still answers 200 |
 | GET | `/api/auth/get-session` | cookie (optional) | `{ session, user }`, or `null` |
 | GET | `/api/me` | cookie | `{ id, email, name }` |
 

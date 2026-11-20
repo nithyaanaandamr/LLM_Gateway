@@ -29,8 +29,8 @@ Only these exist; every other `/api/auth/*` path is a 404. Session design: [secu
 | Method | Path | Auth | Returns |
 |---|---|---|---|
 | POST | `/api/auth/sign-up/email` | none | `{ token, user }` + Set-Cookie |
-| POST | `/api/auth/sign-in/email` | none | `{ token, user, redirect, url }` + Set-Cookie |
-| POST | `/api/auth/sign-out` | cookie + trusted `Origin` | `{ success: true }` + clearing Set-Cookie |
+| POST | `/api/auth/sign-in/email` | none | `{ redirect, token, user }` + Set-Cookie |
+| POST | `/api/auth/sign-out` | trusted `Origin` (cookie to end a session) | `{ success: true }` + clearing Set-Cookie; with no cookie it still answers 200 |
 | GET | `/api/auth/get-session` | cookie (optional) | `{ session, user }`, or `null` when logged out |
 | GET | `/api/me` | cookie (protected scope) | `{ id, email, name }` |
 

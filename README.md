@@ -72,8 +72,10 @@ Copy the env file, then generate the auth secret (needed by the admin API):
 
 ```sh
 cp .env.example .env
-echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)"   # paste this line into .env
+openssl rand -base64 32   # copy the output
 ```
+
+In `.env`, put it after the empty `BETTER_AUTH_SECRET=` line, so the line reads `BETTER_AUTH_SECRET=<the output>`. Don't add a second line.
 
 `.env` is git-ignored. The secret signs session cookies, and changing it logs everyone out. Dev only: production values come from the platform's secret store. Other values are described in the comments of `.env.example`.
 

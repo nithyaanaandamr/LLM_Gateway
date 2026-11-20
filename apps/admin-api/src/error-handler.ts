@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { toErrorResponse, type ErrorBody } from "./errors.ts";
+import { errorForLog } from "./log-error.ts";
 
 export function errorHandler(
   error: unknown,
@@ -9,7 +10,7 @@ export function errorHandler(
   const { statusCode, body } = toErrorResponse(error, request.id);
   if (statusCode >= 500) {
     // see PITFALLS.md: Custom error handler must log
-    request.log.error({ err: error }, "request failed");
+    request.log.error({ err: errorForLog(error) }, "request failed");
   }
   return reply.status(statusCode).send(body);
 }
@@ -20,6 +21,8 @@ export function frameworkErrorHandler(
   request: FastifyRequest,
   reply: FastifyReply,
 ): void {
+  // These errors skip the onSend hooks (no route yet), so set what the hook would set
+  reply.header("cache-control", "no-store");
   void errorHandler(error, request, reply);
 }
 

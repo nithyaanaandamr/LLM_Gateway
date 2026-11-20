@@ -1,12 +1,21 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { testConfig } from "./testing/test-config.ts";
+import { testEnv } from "./testing/test-env.ts";
 
 // what production runs; the test script builds first
 const MAIN = fileURLToPath(new URL("../dist/main.js", import.meta.url));
 const LISTENING = /Server listening at http:\/\/127\.0\.0\.1:(\d+)/;
 
 const children: ChildProcess[] = [];
+
+// Env for the spawned server: fresh database, random secret
+let baseEnv: Record<string, string>;
+
+beforeAll(async () => {
+  baseEnv = testEnv(await testConfig());
+});
 
 afterEach(() => {
   for (const child of children.splice(0)) child.kill("SIGKILL");
@@ -33,8 +42,8 @@ async function waitFor(test: () => boolean, timeoutMs = 5000): Promise<void> {
   }
 }
 
-async function startListening(env: Record<string, string> = { ADMIN_API_PORT: "0" }) {
-  const p = start(env);
+async function startListening() {
+  const p = start(baseEnv);
   await waitFor(() => p.out().includes("Server listening"));
   return p;
 }
@@ -54,7 +63,7 @@ describe("main (real process)", { timeout: 10_000 }, () => {
   });
 
   it("does not print secret values", async () => {
-    const p = start({ ADMIN_API_PORT: "SENTINEL_7a1b" });
+    const p = start({ ...baseEnv, ADMIN_API_PORT: "SENTINEL_7a1b" });
     expect(await p.exited).toBe(1);
     expect(p.err()).toContain("ADMIN_API_PORT");
     expect(p.err()).not.toContain("SENTINEL_7a1b");
@@ -64,7 +73,7 @@ describe("main (real process)", { timeout: 10_000 }, () => {
     const first = await startListening();
     const port = LISTENING.exec(first.out())?.[1];
     expect(port).toBeDefined();
-    const second = start({ ADMIN_API_PORT: port ?? "" });
+    const second = start({ ...baseEnv, ADMIN_API_PORT: port ?? "" });
     expect(await second.exited).toBe(1);
     first.child.kill("SIGTERM");
     expect(await first.exited).toBe(0);

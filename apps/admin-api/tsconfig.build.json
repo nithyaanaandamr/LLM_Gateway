@@ -11,6 +11,9 @@
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.fixture.ts"],
-  "references": []
+  "exclude": ["src/**/*.test.ts", "src/**/*.fixture.ts", "src/testing"],
+  "references": [
+    { "path": "../../packages/db/tsconfig.build.json" },
+    { "path": "../../packages/auth/tsconfig.build.json" }
+  ]
 }

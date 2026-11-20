@@ -33,7 +33,8 @@ export class AppError extends Error {
   }
 }
 
-const CODE_BY_STATUS: Record<number, ErrorCode> = {
+// Status -> code for 4xx; used by the error handler and the auth bridge
+export const CODE_BY_STATUS: Record<number, ErrorCode> = {
   400: "BAD_REQUEST",
   401: "UNAUTHORIZED",
   403: "FORBIDDEN",

@@ -196,6 +196,12 @@ importers:
 
   apps/admin-api:
     dependencies:
+      '@gw/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@gw/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       fastify:
         specifier: ^5.12.7
         version: 5.12.7
@@ -209,6 +215,9 @@ importers:
       concurrently:
         specifier: ^10.0.6
         version: 10.0.6
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@types/pg@8.23.1)(kysely@0.29.7)(pg@8.23.1)
 
   apps/dashboard: {}
 

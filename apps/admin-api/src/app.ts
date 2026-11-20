@@ -1,13 +1,18 @@
 import { randomUUID } from "node:crypto";
+import { createDb } from "@gw/db";
 import Fastify, { type FastifyInstance } from "fastify";
 import {
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
+import { authRoutes } from "./auth/auth-routes.ts";
+import { createAppAuth } from "./auth/create-app-auth.ts";
+import { trustedOrigins } from "./auth/trusted-origins.ts";
 import type { Config } from "./config.ts";
 import { errorHandler, frameworkErrorHandler, notFoundHandler } from "./error-handler.ts";
 import { loggerOptions } from "./logger.ts";
+import { protectedApi } from "./protected-api.ts";
 import { healthRoutes } from "./routes/health.ts";
 
 export function buildApp(config: Config) {
@@ -22,9 +27,24 @@ export function buildApp(config: Config) {
   app.setErrorHandler(errorHandler);
   app.setNotFoundHandler(notFoundHandler);
   closeConnectionsAfterResponseOnShutdown(app);
+  noStoreOnEveryResponse(app);
+  const connection = createDb(config.databaseUrl);
+  app.addHook("onClose", () => connection.close());
   // `void`: plugins load later, on ready()/listen()/inject()
   void app.register(healthRoutes);
+  const auth = createAppAuth(config, connection.db, app.log);
+  void app.register(authRoutes, { auth, baseUrl: config.authBaseUrl });
+  void app.register(protectedApi, { auth, trustedOrigins: trustedOrigins(config) });
   return app;
+}
+
+// Responses carry per-user data and tokens: no browser, proxy or CDN may keep them.
+// Set on the root instance, so it covers every route, the error handler and the 404 handler.
+function noStoreOnEveryResponse(app: FastifyInstance): void {
+  app.addHook("onSend", (_request, reply, payload, done) => {
+    reply.header("cache-control", "no-store");
+    done(null, payload);
+  });
 }
 
 // see PITFALLS.md: Graceful shutdown

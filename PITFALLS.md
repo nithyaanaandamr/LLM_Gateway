@@ -304,3 +304,65 @@ drizzle-orm 0.45 has no `bytea` (we use `customType`). `.default(0n)` on a `bigi
 ## Log tables stay inside packages/db
 
 `schema/logs.ts` isn't exported from `@gw/db`, so apps can't query log tables (ADR 0007). `drizzle.config.ts` lists it separately so migrations still include it. The future LogStore imports it directly.
+
+## Better Auth turns off origin checks in tests
+
+Under `NODE_ENV=test` Better Auth skips its origin and CSRF checks, so tests would pass against a weaker setup than production. `createAuth` sets `advanced.disableOriginCheck: false` explicitly, so tests see production behaviour. It reads `NODE_ENV` once, at import; set behaviour-changing options explicitly instead of relying on its defaults.
+
+## Auth rate limit needs the real client IP
+
+Better Auth reads the client IP only from headers. We set our own `x-gw-client-ip` from Fastify's `request.ip` (replacing anything the client sent) and tell Better Auth to read only that. Default `x-forwarded-for` would let any client fake its IP. Behind a proxy, `request.ip` is the proxy's address until `trustProxy` is set, so everyone shares one bucket (backlog: GW-028). The limiter's store is an in-memory map per process, shared by every auth instance in a test file: give each test request its own `remoteAddress` (`uniqueIp()` in `testing/auth-requests.ts`). It resets on restart and is not shared between instances (backlog: GW-029).
+
+## Better Auth reads env vars by itself
+
+`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` and `BETTER_AUTH_TRUSTED_ORIGINS` are read silently if set. We pass explicit values, which win, but a stray `BETTER_AUTH_TRUSTED_ORIGINS` still adds origins. Keep it out of the environment.
+
+## A signed cookie is not a valid session
+
+The HMAC signature only proves we issued the cookie. Every request also looks up the session row, which is why logout works (the row is deleted) and why the cookie cache stays off (a deleted session would keep working for up to 5 minutes). So a made-up token with a correct signature gets past the signature check and reaches the database; tests for DB failures need such a cookie (`signedCookie()` in `server-process.test.ts`). With two session cookies on one request, the first one wins. Sign-out with the database down returns 200 and clears the cookie, but the session row survives until it expires (backlog: GW-032).
+
+## Session refresh needs its Set-Cookie forwarded
+
+`getSession` may extend a session that is more than 1 day old and send a fresh cookie, or send a clearing cookie for an expired one. `requireSession` copies every `Set-Cookie` onto the reply. Without that, the browser cookie dies on its old date and an active user is logged out after 7 days.
+
+## Session cookie name changes on https
+
+Better Auth adds the `__Secure-` prefix when `BETTER_AUTH_URL` is https (`__Secure-better-auth.session_token`). Never hard-code the cookie name: tests pick it by pattern (`cookieFrom` in `testing/auth-requests.ts`).
+
+## Changing BETTER_AUTH_SECRET logs everyone out
+
+Every cookie signature stops matching. To rotate without logging people out, use Better Auth's versioned `BETTER_AUTH_SECRETS`.
+
+## Auth requests are parsed twice
+
+Fastify parses the JSON body and checks it with Zod; `toWebRequest` then re-serializes it with `JSON.stringify` for Better Auth, and drops `content-length` because the length changed. Consequences:
+- Big numbers lose precision (`12345678901234567890` becomes `12345678901234567000`).
+- The forwarded body is always JSON, whatever the client's content type was (a `text/plain` body arrives as JSON text).
+- `new Request` normalizes the URL: `%2e%2e` becomes `..` and is collapsed, so Better Auth can see a different path than Fastify matched. Only our four fixed routes are forwarded; keep this in mind before ever forwarding a wildcard.
+- An empty body with `content-type: application/json` gets Fastify's own 400 before our code runs. Clients that send no body (sign-out) must also send no `content-type`.
+
+## Better Auth's origin check covers only its own routes
+
+It guards `/api/auth/*`. Our protected routes run `requireTrustedOrigin`, which requires an `Origin` from the trusted list on POST, PUT, PATCH and DELETE (a missing `Origin` is rejected, GET is not checked). Scripts and tests must send `Origin`, even Node `fetch` and curl.
+
+## Session tokens in plain text
+
+`auth.sessions.token` is stored as is, not hashed (gateway keys are hashed). Anyone with read access to the database can use live sessions until they expire (7 days). Accepted for v1; revisit before going public.
+
+## Database errors carry query params
+
+Drizzle puts the SQL and its params in the error message and on `query` and `params`. Params are emails (login lookup), session tokens (session lookup) and password hashes (inserts). pino prints all of it, plus the cause's stack. `errorForLog` (`src/log-error.ts`) turns such an error, even one wrapped inside another, into `{ type, code }`, with the code from the real cause (`ECONNREFUSED`, `57P01`). It is used in two places: the Better Auth `log` hook and the error handler.
+
+What it does not do:
+- Only Drizzle query errors are redacted. Any other error is logged as it is, message and stack included, so never put secrets in an error message.
+- A non-Error `cause` is not inspected.
+- A chain deeper than 5 causes becomes `{ type: "TruncatedErrorChain" }`.
+- The class is found by its name, because Drizzle does not set `error.name`; a test fails if Drizzle renames it.
+
+## Better Auth prints errors to stderr on its own
+
+When a query fails, the router in `better-call` (`dist/router.mjs`) runs `console.error("# SERVER_ERROR: ", error)`, with the SQL params and stack, bypassing our `log` hook. It does this unless the router's `onError` returns a Response or `throwError` is set. Better Auth's own `onError` (`better-auth/dist/api/index.mjs`) returns nothing, so `onAPIError.onError` cannot stop it, and an error thrown inside that hook is caught and logged by Better Auth. `onAPIError: { throw: true }` does: non-API errors then leave `auth.handler` as exceptions and reach our error handler, which logs them with `errorForLog`. API errors (401, 429, ...) still become normal responses. Side effect: Better Auth's own `onError` log lines are skipped; route-level warnings (such as "Invalid password") still arrive through our hook. The real-process test in `server-process.test.ts` checks stdout and stderr for this.
+
+## Request logs include the query string
+
+Fastify's request log prints the full URL, so a token or email in a query string ends up in the logs. Never put secrets in URLs; send them in a header or body.

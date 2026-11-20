@@ -66,6 +66,19 @@ docker version     # client and server both listed
 
 Versions last checked: 2026-10-22 (Node 24.22.1, pnpm 12.14.0, OrbStack 2.2.4, Docker 29.8.2, Compose 5.5.0).
 
+### One-time dev setup
+
+Copy the env file, then generate the auth secret (needed by the admin API):
+
+```sh
+cp .env.example .env
+openssl rand -base64 32   # copy the output
+```
+
+In `.env`, paste it right after the `=` on the existing `BETTER_AUTH_SECRET=` line, so the line reads `BETTER_AUTH_SECRET=<the output>`. Don't add a second line.
+
+`.env` is git-ignored. The secret signs session cookies, and changing it logs everyone out. Dev only: production values come from the platform's secret store. Other values are described in the comments of `.env.example`.
+
 ### Scripts
 
 Run from the repo root:

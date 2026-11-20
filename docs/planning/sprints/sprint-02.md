@@ -35,6 +35,13 @@ Status is `Open` or `Done`. The board bot sets `Done` after merge.
 | Packages and apps compile to dist (tsc -b) | Decided | [ADR 0012](../../decisions/0012-packages-compile-to-dist.md): GW-013 |
 | Board bot sync failed when PRs merged while its PR was open | Decided | [PITFALLS.md](../../../PITFALLS.md): Board bot (GW-026) |
 | Auth tables use timestamp without time zone (Better Auth generator) | Decided | [PITFALLS.md](../../../PITFALLS.md): Better Auth tables have no time zone |
+| Auth error shape: translate Better Auth errors | Decided | [admin-api README](../../../apps/admin-api/README.md#errors): GW-017 |
+| Auth endpoints: expose only the four we use | Decided | [api.md](../../architecture/api.md#admin-api): GW-017 |
+| Duplicate sign-up returns 409 (email enumeration accepted) | Decided | [security.md](../../architecture/security.md#dashboard-sessions): GW-017 |
+| Login rate limit: built-in, in memory, all environments | Decided | [PITFALLS.md](../../../PITFALLS.md): Auth rate limit needs the real client IP |
+| CSRF on our cookie routes: Origin check on unsafe methods | Decided | [PITFALLS.md](../../../PITFALLS.md): Better Auth's origin check covers only its own routes |
+| DASHBOARD_ORIGIN must be https unless local | Decided | [admin-api README](../../../apps/admin-api/README.md#config): GW-017 |
+| Session tokens stored in plain text | Drafted | [PITFALLS.md](../../../PITFALLS.md): Session tokens in plain text |
 
 States and rules: [README.md](../README.md#open-topics).
 

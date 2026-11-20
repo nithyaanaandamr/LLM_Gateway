@@ -8,6 +8,14 @@ const LISTENING = /Server listening at http:\/\/127\.0\.0\.1:(\d+)/;
 
 const children: ChildProcess[] = [];
 
+// Placeholder values for the vars config now requires; nothing connects to them yet
+const REQUIRED_ENV = {
+  DATABASE_URL: "postgres://placeholder@localhost:5432/placeholder",
+  BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret-0123",
+  BETTER_AUTH_URL: "http://localhost:8081",
+  DASHBOARD_ORIGIN: "http://localhost:5173",
+};
+
 afterEach(() => {
   for (const child of children.splice(0)) child.kill("SIGKILL");
 });
@@ -33,7 +41,9 @@ async function waitFor(test: () => boolean, timeoutMs = 5000): Promise<void> {
   }
 }
 
-async function startListening(env: Record<string, string> = { ADMIN_API_PORT: "0" }) {
+async function startListening(
+  env: Record<string, string> = { ADMIN_API_PORT: "0", ...REQUIRED_ENV },
+) {
   const p = start(env);
   await waitFor(() => p.out().includes("Server listening"));
   return p;
@@ -54,7 +64,7 @@ describe("main (real process)", { timeout: 10_000 }, () => {
   });
 
   it("does not print secret values", async () => {
-    const p = start({ ADMIN_API_PORT: "SENTINEL_7a1b" });
+    const p = start({ ADMIN_API_PORT: "SENTINEL_7a1b", ...REQUIRED_ENV });
     expect(await p.exited).toBe(1);
     expect(p.err()).toContain("ADMIN_API_PORT");
     expect(p.err()).not.toContain("SENTINEL_7a1b");
@@ -64,7 +74,7 @@ describe("main (real process)", { timeout: 10_000 }, () => {
     const first = await startListening();
     const port = LISTENING.exec(first.out())?.[1];
     expect(port).toBeDefined();
-    const second = start({ ADMIN_API_PORT: port ?? "" });
+    const second = start({ ADMIN_API_PORT: port ?? "", ...REQUIRED_ENV });
     expect(await second.exited).toBe(1);
     first.child.kill("SIGTERM");
     expect(await first.exited).toBe(0);

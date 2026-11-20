@@ -11,9 +11,17 @@ type Proc = {
 };
 const running: Proc[] = [];
 
+// Placeholder values for the vars config now requires; nothing connects to them yet
+const REQUIRED_ENV = {
+  DATABASE_URL: "postgres://placeholder@localhost:5432/placeholder",
+  BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret-0123",
+  BETTER_AUTH_URL: "http://localhost:8081",
+  DASHBOARD_ORIGIN: "http://localhost:5173",
+};
+
 function start(env: Record<string, string>): Proc {
   const child = spawn(process.execPath, [FIXTURE], {
-    env: { PATH: process.env.PATH ?? "", ADMIN_API_PORT: "0", ...env },
+    env: { PATH: process.env.PATH ?? "", ADMIN_API_PORT: "0", ...REQUIRED_ENV, ...env },
   });
   let out = "";
   child.stdout.on("data", (d: Buffer) => (out += d.toString()));

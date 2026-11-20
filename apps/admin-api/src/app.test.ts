@@ -4,7 +4,16 @@ import { buildApp, type App } from "./app.ts";
 import { AppError } from "./errors.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const config = { port: 0, host: "127.0.0.1", logLevel: "silent" } as const;
+// Placeholder auth values: buildApp doesn't read them yet (GW-017 W3 replaces this with testConfig())
+const config = {
+  port: 0,
+  host: "127.0.0.1",
+  logLevel: "silent",
+  databaseUrl: "postgres://placeholder@localhost:5432/placeholder",
+  authSecret: "test-secret-test-secret-test-secret-0123",
+  authBaseUrl: "http://localhost:8081",
+  dashboardOrigin: "http://localhost:5173",
+} as const;
 
 let app: App;
 afterEach(async () => {

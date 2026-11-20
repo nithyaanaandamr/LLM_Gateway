@@ -4,8 +4,9 @@ import { AppError } from "../errors.ts";
 
 declare module "fastify" {
   interface FastifyRequest {
-    // Set by requireSession; null outside the protected scope
-    auth: AuthSession | null;
+    // Set by requireSession. Only the protected scope declares it (null until the hook
+    // runs); outside that scope the property does not exist, so it reads as undefined.
+    auth?: AuthSession | null;
   }
 }
 

@@ -16,8 +16,20 @@ Drizzle schema, migrations and the database client.
 - `migrations/`: generated SQL, committed
 - `src/client.ts`: `createDb(url)`
 - `src/migrate.ts`: `runMigrations(url)`
+- `src/repositories/`: queries (see Repositories)
+- `src/unique-violation.ts`: `isUniqueViolation(error, constraint)`, for turning a duplicate into a 409
 - `src/testing/`: test-only helpers, exported as `@gw/db/testing`
 - `dist/`: compiled output (git-ignored; `pnpm build`)
+
+## Repositories
+
+Plain functions in `src/repositories/` that take `db` and load or store rows. They never encrypt (services in the apps combine the two). Apps never import `drizzle-orm` at runtime, so every query goes through these.
+
+- `projects.ts`: `insertProject`, `listAccessibleProjects`, `findAccessibleProject`, `countAccessibleProjects`, `renameProject`, `deleteProject`
+
+**Project access.** `project-access.ts` exports `accessibleProjects(userId)`, a SQL condition (today `owner_id = userId`). It is the only code that reads `owner_id` to decide access ([ADR 0011](../../docs/decisions/0011-project-ownership.md)); a test pins this. It is not exported from the package. Use `findAccessibleProject` or `listAccessibleProjects`: one query checks access and loads the row, and "someone else's" and "missing" both come back as `undefined`. `renameProject` and `deleteProject` skip the check, so call them only after `findAccessibleProject`.
+
+Name repository functions after their table (`insertGatewayKey`, not `insert`): the index does `export *` from each file, and two equal names are a TypeScript error.
 
 ## Add a migration
 

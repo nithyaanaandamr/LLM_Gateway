@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-017 | Dashboard auth (Better Auth) | 1 | Builds on GW-014's auth config; sign up, log in, log out via API; session cookie; note on how sessions work (ADR 0005) |
 
 ## Ready
 
@@ -58,3 +57,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-016 | Admin API skeleton | 1 | 2026-10-31 |
 | GW-026 | Board bot rebuilds its branch instead of merging main | 0 | 2026-10-31 |
 | GW-014 | App schema and migrations | 1 | 2026-11-20 |
+| GW-017 | Dashboard auth (Better Auth) | 1 | 2026-11-21 |

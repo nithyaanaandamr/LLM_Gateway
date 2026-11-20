@@ -29,7 +29,12 @@ Plain functions in `src/repositories/` that take `db` and load or store rows. Th
 
 **Project access.** `project-access.ts` exports `accessibleProjects(userId)`, a SQL condition (today `owner_id = userId`). It is the only code that reads `owner_id` to decide access ([ADR 0011](../../docs/decisions/0011-project-ownership.md)); a test pins that only `project-access.ts` and `insert-project.ts` (the one writer) name it, in this package and in admin-api. It is not exported from the package. Use `findAccessibleProject` or `listAccessibleProjects`: one query checks access and loads the row, and "someone else's" and "missing" both come back as `undefined`. `renameProject` and `deleteProject` take the user ID and apply the same condition, so they are safe even without a prior `findAccessibleProject`.
 
-**Exact limits.** `limit-lock.ts` exports `lockForLimit(tx, scope, id)`: a Postgres advisory lock held until the transaction ends. A cap is exact only if the lock, the count and the insert share one transaction (see `insertProjectWithinLimit`). Parallel requests for the same `(scope, id)` take turns; others don't wait.
+**Exact limits.** A cap (100 projects per user, 20 active gateway keys per project) is counted and inserted in one transaction that first takes a lock, so parallel requests can't overshoot ([ADR 0013](../../docs/decisions/0013-atomic-limits.md)).
+- `limit-lock.ts` exports `lockForLimit(tx, scope, id)`: a Postgres advisory lock (`pg_advisory_xact_lock`) named by `(scope, id)`, held until the transaction ends (commit, rollback or a dead connection). Requests with the same `(scope, id)` take turns; others don't wait. It is generic: projects use `("projects", userId)`, gateway keys (GW-020) will use `("gateway-keys", projectId)`. Not exported from the package.
+- Pattern: `db.transaction(async (tx) => { await lockForLimit(tx, scope, id); count; insert })`. See `insertProjectWithinLimit`, which returns `{ status: "created", project }` or `{ status: "limit_reached" }`. A duplicate name still throws; `isProjectNameTaken(error)` recognises it.
+- The lock holds a pooled connection while it waits (PITFALLS.md: Lock waits share the database pool).
+
+**`Transaction` and `Queryable`** (`client.ts`): `Transaction` is what a `db.transaction` callback receives; `Queryable` is `Database | Transaction`. Repository functions that must work both alone and inside a cap transaction (`insertProject`, `countAccessibleProjects`) take a `Queryable`.
 
 Name repository functions after their table (`insertGatewayKey`, not `insert`): the index does `export *` from each file, and two equal names are a TypeScript error.
 

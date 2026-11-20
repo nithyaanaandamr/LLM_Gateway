@@ -227,7 +227,7 @@ SOLID is a set of five rules for code (classes and modules). Tables aren't code,
 | **I**nterface segregation | Interfaces are shaped by who uses them. The gateway gets `findGatewayKeyByHash` only; the admin API gets create, list, revoke. |
 | **D**ependency inversion | Apps depend on interfaces, not on Drizzle. The real implementations are wired in once at startup. No dependency-injection framework. |
 
-Tenancy (users only see their own data) goes through one function, `canAccessProject(userId, projectId)`. No query checks `owner_id` on its own, so moving to teams changes only that function ([ADR 0011](../decisions/0011-project-ownership.md)).
+Tenancy (users only see their own data) goes through one SQL condition, `accessibleProjects(userId)` (ADR 0011 calls it `canAccessProject`), used by `findAccessibleProject` and `listAccessibleProjects` in `packages/db/src/repositories`. No query checks `owner_id` on its own, so moving to teams changes only that condition ([ADR 0011](../decisions/0011-project-ownership.md)). Caps (projects per user, active gateway keys per project) are counted under an advisory lock ([ADR 0013](../decisions/0013-atomic-limits.md)).
 
 ## Later phases (sketch, not in GW-014)
 

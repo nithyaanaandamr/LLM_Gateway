@@ -42,6 +42,18 @@ Status is `Open` or `Done`. The board bot sets `Done` after merge.
 | CSRF on our cookie routes: Origin check on unsafe methods | Decided | [PITFALLS.md](../../../PITFALLS.md): Better Auth's origin check covers only its own routes |
 | DASHBOARD_ORIGIN must be https unless local | Decided | [admin-api README](../../../apps/admin-api/README.md#config): GW-017 |
 | Session tokens stored in plain text | Drafted | [PITFALLS.md](../../../PITFALLS.md): Session tokens in plain text |
+| Database queries live in `packages/db/src/repositories/`; admin-api never imports Drizzle at runtime | Decided | [packages/db README](../../../packages/db/README.md#repositories): GW-018 (decision 1A) |
+| Gateway key revoke path: `DELETE /api/projects/:projectId/gateway-keys/:keyId`, inside the project scope | Decided | [api.md](../../architecture/api.md#gateway-keys): GW-020 (decision 2A) |
+| Limits are exact: counted and inserted under a Postgres advisory lock (100 projects per user, 20 active gateway keys per project) | Decided | [PITFALLS.md](../../../PITFALLS.md): Limits are counted under a lock (decision 3, revised) |
+| Provider key accepted as is: trim, non-empty, at most 512, no `gw_live_` prefix, no provider format check | Decided | [api.md](../../architecture/api.md#provider-key): GW-019, GW-036 (decision 4, variant) |
+| Phase 1 end-to-end test runs the real server process over HTTP | Decided | [board.md](../board.md): GW-021 (decision 5A) |
+| Repository writes check access too (defence in depth) | Decided | [security.md](../../architecture/security.md#authorization): GW-018 |
+| Keep the blocking lock; GW-034 (rate limit admin writes) ships before first deployment | Decided | [PITFALLS.md](../../../PITFALLS.md): Lock waits share the database pool |
+| Every limit is one atomic check-and-count | Decided | [ADR 0013](../../decisions/0013-atomic-limits.md): GW-018 |
+| Not your project answers 404, not 403 | Drafted | [security.md](../../architecture/security.md#authorization) |
+| Project scope checks access before the body is read | Drafted | [PITFALLS.md](../../../PITFALLS.md): Project scope runs before the body is read |
+| One MASTER_KEY, version fixed at 1, rotation later | Drafted | [board.md](../board.md): GW-035 |
+| Project names: NFC, no control or bidi characters; list sorted by bytes | Drafted | [PITFALLS.md](../../../PITFALLS.md): Names refuse control and bidi characters |
 
 States and rules: [README.md](../README.md#open-topics).
 

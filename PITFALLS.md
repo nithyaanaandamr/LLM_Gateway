@@ -366,3 +366,72 @@ When a query fails, the router in `better-call` (`dist/router.mjs`) runs `consol
 ## Request logs include the query string
 
 Fastify's request log prints the full URL, so a token or email in a query string ends up in the logs. Never put secrets in URLs; send them in a header or body.
+
+## Not your project is 404, not 403
+
+403 means "it exists, but it isn't yours", which tells a stranger which project IDs are real (an **existence oracle**). The project scope answers 404 for someone else's project and for one that doesn't exist: same status, same code, same message, and the same single query, so the timing matches too. The owner never sees this 404, so nothing useful is hidden from real users. `project-ownership.test.ts` compares the two answers for every `:projectId` route.
+
+One small difference remains: a `projectId` that can't be a UUID is answered without a query, so it is a little faster. It reveals nothing, because such an ID can't exist.
+
+## Project access goes through one condition
+
+Only `accessibleProjects(userId)` (`packages/db/src/repositories/project-access.ts`) reads `owner_id` to decide access ([ADR 0011](docs/decisions/0011-project-ownership.md) calls it `canAccessProject`). It is a SQL condition, not a yes/no function, so one query both checks access and loads the row. Moving to teams changes only this condition.
+
+- Never query `projects` from an app. Use `findAccessibleProject` and `listAccessibleProjects`; `renameProject` and `deleteProject` apply the same condition themselves (defence in depth: they are the only functions that touch a project by its bare ID).
+- `insertProject` is the one place that writes `owner_id`, and `owner-access-rule.test.ts` fails if any other file in `packages/db/src` or `apps/admin-api/src` (schema, tests and test helpers aside) names the owner column.
+- The cap counts *accessible* projects. Once teams exist, team projects will count toward a user's 100.
+
+## Project scope runs before the body is read
+
+The project check is an `onRequest` hook. Fastify has set `request.params` by then but has not parsed or validated the body, so:
+- another user's project is 404 even with a broken body (a body error can't come first and confirm that the project exists);
+- a malformed `projectId` is 404, not 400: an ID that can't exist is "not found". A malformed `keyId` (a child ID) stays a 400 from the route schema, because that is checked after access is settled;
+- `project-ownership.test.ts` needs no valid body per route.
+
+The hook relies on the protected scope's session hook running first (it needs the user). Hooks of a parent plugin run before those of its children, which is why the project scope must stay inside the protected scope.
+
+## Use the project ID from the database
+
+`z.uuid()` accepts uppercase hex, and Postgres matches it, so `/api/projects/6F1C…` finds the project. The row Postgres returns has the lowercase ID. Handlers use `getProject(request).id`, never the URL's `projectId`, so every later query and the provider key's AAD get the canonical ID (see Project ID as AAD must be canonical). The URL value is used once, for the lookup.
+
+## Limits are counted under a lock
+
+Every cap (100 projects per user; 20 active gateway keys per project in GW-020) is counted and inserted in one transaction that first takes a Postgres advisory lock named by the cap and its owner: `lockForLimit(tx, "projects", userId)`. Parallel creates for the same user take turns; other users don't wait. Decision and alternatives: [ADR 0013](docs/decisions/0013-atomic-limits.md).
+
+- **Why not count, then insert:** two requests both count 99 and both insert. QA measured 20 parallel creates from 99 ending at 119: the overshoot equals the number of parallel requests.
+- **Why one conditional statement is still racy:** `INSERT … SELECT … WHERE (select count(*) …) < 100` runs under READ COMMITTED, where each statement works from its own snapshot. Two concurrent statements can't see each other's uncommitted row, so both count 99 and both insert. A unique constraint can't express "at most 100".
+- **Why an advisory lock and not `SELECT … FOR UPDATE` on a parent row:** for projects the parent is `auth.users`, Better Auth's table, and we don't lock tables we don't own. We have no row of our own to lock for "this user's projects". An advisory lock needs no row.
+- **Why the lock is transaction-scoped:** `pg_advisory_xact_lock` is released at commit or rollback, on every error path, and when the connection dies. It also works behind PgBouncer in transaction pooling mode; session-level locks (`pg_advisory_lock`) do not.
+- **The key** is `hashtextextended(scope || ':' || id, 0)`, a bigint. Two different names with the same hash would only wait for each other needlessly.
+- **Deletes take no lock:** they only lower the count, which can't break the cap.
+- A duplicate name still surfaces as a unique violation inside the transaction (it rolls back and releases the lock), see Unique violations are found by constraint name.
+
+## Lock waits share the database pool
+
+While a create waits for its user's lock it holds one pooled connection. `pg` allows 10 per process by default, and the same pool serves session checks for every request. A burst of creates from one user can therefore use up the pool and delay other users. QA measured a 500-create burst from one user delaying other users by up to 0.2 s locally (estimated 2 to 5 s on a networked database), with no errors; it clears by itself as the burst drains one create at a time.
+
+The owner chose to keep the blocking lock (the cap stays exact) and not to change pool settings in GW-018. **GW-034 (rate limit admin writes per user) must ship before the first deployment**: it keeps one user from queueing that many creates. Other levers, not used yet: a larger pool, `lock_timeout` on the transaction (turns a long wait into an error), a pool size setting (possible GW-037).
+
+## Unique violations are found by constraint name
+
+A duplicate project name is detected from the database, not by looking first, so two parallel creates can't both succeed. `isUniqueViolation(error, constraint)` reads `code === "23505"` and the constraint name from the pg error, which Drizzle wraps in `cause` (the chain is walked, at most 5 deep). `isProjectNameTaken` names the constraint `projects_owner_id_name_unique`. Renaming that constraint in a migration silently turns the 409 into a 500; `unique-violation.test.ts` and the duplicate-name route tests pin the real name.
+
+## Zod and Postgres agree on name length (code points)
+
+Names are 1 to 100 characters. Zod 4.6.7 counts code points once a string is longer than the limit in UTF-16 units (`zod/v4/core/checks.js`: it measures units first and falls back to code points only when that already exceeds the max). Postgres `char_length` counts characters, which for UTF-8 are code points. So 100 emoji (200 UTF-16 units) pass both and 101 fail both, and the DB `CHECK` never fires first. Tests pin the 100 and 101 emoji boundary on both sides. Zod normalizes to NFC before the length check, so a name typed with combining accents counts like the stored text. If a Zod upgrade changes the counting, those tests fail.
+
+## Names refuse control and bidi characters
+
+The shared name rule (project names now, gateway key names in GW-020) refuses:
+- **Control characters** (`\p{Cc}`): NUL makes Postgres fail with a 500 (text can't hold it); newlines and BEL break logs and UIs. The check sees the raw text before trimming, so a trailing newline is refused, not trimmed away.
+- **Bidi overrides and isolates** (U+202A to U+202E, U+2066 to U+2069): they make a name display as something else.
+
+It does not refuse all format characters (`\p{Cf}`): that would break ZWJ emoji and Persian and Indic scripts, which need ZWJ and ZWNJ. Order: control check, trim, NFC, then length. NFC means "café" typed either way is one name, so the unique constraint can't be dodged with a different Unicode spelling. Lookalike letters from other scripts (homoglyphs) are not handled.
+
+## List order must not depend on the collation
+
+`ORDER BY name` follows the database's default collation: the Alpine Postgres used in tests sorts by bytes (`A, B, a, b`), while a glibc or RDS database sorts `a, A, b, B`. The list uses `ORDER BY name COLLATE "C", id`, which sorts by bytes everywhere. `lower(name)` was rejected because it still depends on the locale for non-ASCII text. The test sets an ICU collation on the column first, so it fails if the `COLLATE` is removed even on a byte-sorting database. If a friendlier order is wanted later, sort in the dashboard.
+
+## Fastify onRoute errors in callback plugins are uncaught
+
+The project scope must stop a route that has no `:projectId`. Throwing from an `onRoute` hook doesn't do it: avvio catches only promise rejections, so a synchronous throw inside a callback-style plugin (our `FastifyPluginCallbackZod` convention) becomes an `uncaughtException`, and `ready()` never settles. Making the outer plugin async doesn't help: what matters is the plugin that registers the route. `projectScope` therefore only records the bad URLs in `onRoute` (in a `Set`, because Fastify adds a HEAD route for each GET) and throws from an `onReady` hook, so `ready()` rejects with a message that lists them. `require-project.test.ts` checks callback and async plugins, at the top and in child plugins.

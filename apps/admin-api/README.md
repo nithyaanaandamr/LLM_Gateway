@@ -40,6 +40,10 @@ Each task adds its vars here.
 | POST | `/api/auth/sign-out` | trusted `Origin` (cookie to end a session) | `{ success: true }` and a clearing cookie; with no cookie it still answers 200 |
 | GET | `/api/auth/get-session` | cookie (optional) | `{ session, user }`, or `null` |
 | GET | `/api/me` | cookie | `{ id, email, name }` |
+| GET, POST | `/api/projects` | cookie (POST: trusted `Origin`) | project list; create a project |
+| GET, PATCH, DELETE | `/api/projects/:projectId` | cookie, project owner (PATCH, DELETE: trusted `Origin`) | one project; rename; delete |
+
+Project routes (and the planned provider key and gateway key routes) are specified in [api.md](../../docs/architecture/api.md#projects): bodies, shapes, limits and errors. Another user's project is always 404.
 
 Unsafe methods (POST, PUT, PATCH, DELETE) need an `Origin` header from the trusted list: the dashboard origin and the API's own origin. Rate limit on sign-in and sign-up: 3 per 10 s per IP, then 429 with `Retry-After`. Details: [api.md](../../docs/architecture/api.md#auth-and-session-routes), [security.md](../../docs/architecture/security.md#dashboard-sessions).
 
@@ -51,11 +55,28 @@ Unsafe methods (POST, PUT, PATCH, DELETE) need an `Origin` header from the trust
 
 `src/route-inventory.test.ts` enforces this: it lists every route `buildApp` registers and expects 401 from each one without a session, except an allowlist of public routes (`PUBLIC_ROUTES` in that test). A new **public** route must be added to that list on purpose; a route registered outside the protected scope by mistake fails the build. Path params such as `:id` are filled with a dummy UUID, so new routes need no test edits.
 
+### Adding a project-scoped route
+
+Routes about one project (`/api/projects/:projectId/...`) go in the project scope, which checks that the logged-in user may access the project.
+
+1. Register the route plugin inside `src/projects/project-scoped-api.ts` (a `register(...)` next to `projectItemRoutes`). That scope sits inside the protected scope, so the session and `Origin` checks run first, then the project check.
+2. Put `:projectId` in the path. A route in the scope without it stops `app.ready()` with an error naming the route.
+3. In the handler, call `getProject(request)` for the project. Use its `id` (from the database), never the URL's `projectId`.
+4. Find child rows through the project: `WHERE id = :childId AND project_id = project.id`, never by the child's ID alone.
+5. Don't query the `projects` table directly: use the functions in `@gw/db` (`findAccessibleProject`, ...). Apps never import `drizzle-orm` at runtime.
+
+`src/project-ownership.test.ts` covers the new route with no test edits: it calls every `:projectId` route as a user who doesn't own the project and expects the same 404 as for a random UUID. Still write the route's own tests, including the child-row case. See [security.md](../../docs/architecture/security.md#authorization).
+
 ### Testing with auth
 
 Helpers are in `src/testing/auth-requests.ts` (test-only, not built):
 - `signUp`, `signIn`, `signOut`, `getSession`: send the request with `app.inject`, the dashboard `Origin` and a **unique** client IP. Pass `origin: null` to send no `Origin`.
 - `cookieFrom(response)`: the session cookie as `name=value` for the next request. It finds the cookie by name pattern, because https adds a `__Secure-` prefix.
+- `signUpUser(app, config)`: signs up a user with a random email and returns `{ cookie, userId, email }`.
+- `apiRequest(app, config, { method, url, cookie, payload, origin })` (`testing/api-requests.ts`): any route, with a unique IP and the dashboard `Origin` by default. `payload` is any JSON value, so tests can send arrays, `null` and numbers.
+- `createProject(app, config, cookie, name?)` (`testing/project-requests.ts`): creates a project through the API and returns it.
+- `buildAppAndCollectRoutes(config)` (`testing/route-collector.ts`): builds the app and lists every route, as the inventory tests do.
+- `startListening(script, env)`, `stopServer`, `killAllServers`, `logLines` (`testing/server-process.ts`): run a script as a real server process, for real-process tests.
 - `uniqueIp()`: the rate limit is per IP and its memory is shared by every app in a test file, so each request needs its own IP.
 - `testConfig()` gives a fresh migrated database and a random secret. Tests must send `Origin` (even for DELETE and POST on protected routes).
 - To test database failures in a real process (`src/server-process.test.ts`), point `DATABASE_URL` at a closed port and send a made-up token **signed with the secret** (`signedCookie`). An unsigned cookie is rejected before the database is touched.
@@ -86,5 +107,7 @@ Better Auth's own errors (`{ message, code }`) are translated into this shape (`
 | bad input (`VALIDATION_ERROR`, password too short or long, invalid email) | 400 `VALIDATION_FAILED` |
 | other 4xx | the same status, mapped to a code (401 `UNAUTHORIZED`, 403 `FORBIDDEN`, 429 `RATE_LIMITED`, ...) with Better Auth's message |
 | 5xx | 500 `INTERNAL`, generic; the cause is logged |
+
+Project routes also use `NOT_FOUND` ("Project not found"), `CONFLICT` (duplicate name, project limit) and `FORBIDDEN` (untrusted `Origin`). A URL with a path parameter over 100 characters is 414 "URL too long" (and a malformed URL 400 "Invalid URL"); neither message repeats the URL.
 
 `details` appears only for validation errors. 5xx errors never include details. Quote the `requestId` when reporting a problem.

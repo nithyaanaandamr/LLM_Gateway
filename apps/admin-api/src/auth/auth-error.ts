@@ -9,7 +9,13 @@ const betterAuthErrorBody = z.object({
 
 // Better Auth code strings we map on purpose; a library upgrade that renames one fails a test
 const USER_EXISTS = "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL";
-const VALIDATION_ERROR = "VALIDATION_ERROR";
+// Better Auth's own input checks; all answer 400 VALIDATION_FAILED, like our Zod check does
+const VALIDATION_CODES = new Set([
+  "VALIDATION_ERROR",
+  "PASSWORD_TOO_SHORT",
+  "PASSWORD_TOO_LONG",
+  "INVALID_EMAIL",
+]);
 
 const MESSAGE_BY_STATUS: Record<number, string> = {
   400: "Bad request",
@@ -29,7 +35,7 @@ export async function toAuthError(response: Response): Promise<Error> {
   }
   const { message, code } = await readBody(response);
   if (code === USER_EXISTS) return new AppError(409, "CONFLICT", message ?? "User already exists");
-  if (code === VALIDATION_ERROR) {
+  if (code !== undefined && VALIDATION_CODES.has(code)) {
     return new AppError(400, "VALIDATION_FAILED", message ?? "Request is invalid");
   }
   return new AppError(

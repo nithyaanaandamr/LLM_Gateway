@@ -1,8 +1,11 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { createDb } from "@gw/db";
+import { sql } from "drizzle-orm";
+import { afterEach, beforeAll, describe, expect, inject, it } from "vitest";
 import { z } from "zod";
 import { buildApp, type App } from "./app.ts";
 import type { Config } from "./config.ts";
 import { AppError } from "./errors.ts";
+import { signIn } from "./testing/auth-requests.ts";
 import { testConfig } from "./testing/test-config.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -145,5 +148,42 @@ describe("error handling", () => {
     const res = await app.inject("/bad-response");
     expect(res.statusCode).toBe(500);
     expect(errorOf(res).code).toBe("INTERNAL");
+  });
+});
+
+describe("database pool", () => {
+  // Counts open connections to this test's own database, asked from a separate admin connection
+  async function openConnections(databaseUrl: string): Promise<number> {
+    const admin = createDb(inject("testPostgres").adminUrl);
+    try {
+      const name = new URL(databaseUrl).pathname.slice(1);
+      const result = await admin.db.execute<{ n: number }>(
+        sql`select count(*)::int as n from pg_stat_activity where datname = ${name}`,
+      );
+      return result.rows[0]?.n ?? 0;
+    } finally {
+      await admin.close();
+    }
+  }
+
+  async function waitForNoConnections(databaseUrl: string): Promise<number> {
+    let count = await openConnections(databaseUrl);
+    for (let i = 0; i < 40 && count > 0; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      count = await openConnections(databaseUrl);
+    }
+    return count;
+  }
+
+  it("is closed when the app closes", async () => {
+    const own = await testConfig();
+    app = buildApp(own);
+    // a real auth request makes the pool open a connection
+    await signIn(app, own, { email: "nobody@example.com", password: "wrong-password" });
+    expect(await openConnections(own.databaseUrl)).toBeGreaterThan(0);
+
+    await app.close();
+
+    expect(await waitForNoConnections(own.databaseUrl)).toBe(0);
   });
 });

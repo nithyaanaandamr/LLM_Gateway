@@ -49,6 +49,14 @@ describe("toAuthError", () => {
     expect(error).toMatchObject({ statusCode: 400, code: "VALIDATION_FAILED" });
   });
 
+  it.each(["PASSWORD_TOO_SHORT", "PASSWORD_TOO_LONG", "INVALID_EMAIL"])(
+    "maps %s to 400 VALIDATION_FAILED",
+    async (code) => {
+      const error = await appErrorFor(jsonResponse(400, { message: "Password too short", code }));
+      expect(error).toMatchObject({ statusCode: 400, code: "VALIDATION_FAILED" });
+    },
+  );
+
   it("keeps the status of another 4xx and calls it BAD_REQUEST", async () => {
     const error = await appErrorFor(
       jsonResponse(422, { message: "Failed", code: "FAILED_TO_CREATE_USER" }),

@@ -6,6 +6,8 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
+import { authRoutes } from "./auth/auth-routes.ts";
+import { createAppAuth } from "./auth/create-app-auth.ts";
 import type { Config } from "./config.ts";
 import { errorHandler, frameworkErrorHandler, notFoundHandler } from "./error-handler.ts";
 import { loggerOptions } from "./logger.ts";
@@ -27,6 +29,8 @@ export function buildApp(config: Config) {
   app.addHook("onClose", () => connection.close());
   // `void`: plugins load later, on ready()/listen()/inject()
   void app.register(healthRoutes);
+  const auth = createAppAuth(config, connection.db, app.log);
+  void app.register(authRoutes, { auth, baseUrl: config.authBaseUrl });
   return app;
 }
 

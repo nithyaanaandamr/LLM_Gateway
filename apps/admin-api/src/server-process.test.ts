@@ -1,4 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { createHmac } from "node:crypto";
+import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { testConfig } from "./testing/test-config.ts";
@@ -10,6 +12,7 @@ type Proc = {
   child: ChildProcess;
   exited: Promise<number | null>;
   out: () => string;
+  err: () => string;
 };
 const running: Proc[] = [];
 
@@ -25,9 +28,11 @@ function start(env: Record<string, string>): Proc {
     env: { PATH: process.env.PATH ?? "", ...baseEnv, ...env },
   });
   let out = "";
+  let err = "";
   child.stdout.on("data", (d: Buffer) => (out += d.toString()));
+  child.stderr.on("data", (d: Buffer) => (err += d.toString()));
   const exited = new Promise<number | null>((r) => child.on("exit", (c) => r(c)));
-  const p = { child, exited, out: () => out };
+  const p = { child, exited, out: () => out, err: () => err };
   running.push(p);
   return p;
 }
@@ -124,5 +129,140 @@ describe("real process: logging and shutdown", { timeout: 15_000 }, () => {
     p.child.kill("SIGTERM");
     expect(await p.exited).toBe(0);
     await expect(fetch(`${p.url}/health`)).rejects.toThrow();
+  });
+});
+
+// ---- Secrets and personal data stay out of the logs ----
+
+const PASSWORD = "correct-horse-battery";
+const EMAIL = "realproc@example.com";
+const NAME = "Real Process";
+const SESSION_COOKIE_NAME = "better-auth.session_token";
+// Any session_token cookie with a value (the name may carry a __Secure- prefix)
+const COOKIE_WITH_VALUE = /session_token=[^\s"\\;]+/;
+
+type Json = Record<string, unknown>;
+
+// JSON POST with the dashboard Origin, which Better Auth and requireTrustedOrigin require
+function post(url: string, path: string, body: Json | null, cookie?: string) {
+  return fetch(`${url}${path}`, {
+    method: "POST",
+    headers: {
+      ...(body === null ? {} : { "content-type": "application/json" }),
+      origin: baseEnv["DASHBOARD_ORIGIN"] ?? "",
+      ...(cookie ? { cookie } : {}),
+    },
+    ...(body === null ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
+// "name=value" from the response's session cookie, as a browser would send it back
+function sessionCookieOf(res: Response): string {
+  const found = res.headers.getSetCookie().find((c) => c.includes("session_token="));
+  if (!found) throw new Error("no session cookie in response");
+  return found.split(";")[0] ?? "";
+}
+
+// What a real cookie looks like: <token>.<base64 HMAC-SHA256 of the token>, URL-encoded.
+// A made-up token with a correct signature gets past the signature check and reaches the DB.
+function signedCookie(token: string, secret: string): string {
+  const signature = createHmac("sha256", secret).update(token).digest("base64");
+  return `${SESSION_COOKIE_NAME}=${encodeURIComponent(`${token}.${signature}`)}`;
+}
+
+// A TCP port nothing listens on: bind to a free port, then release it
+async function closedPort(): Promise<number> {
+  const server = createServer();
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  const address = server.address();
+  const port = typeof address === "object" && address !== null ? address.port : 0;
+  await new Promise((r) => server.close(r));
+  return port;
+}
+
+// Every string a leak could show up as: raw, URL-encoded and decoded forms of a cookie value
+function forms(value: string): string[] {
+  return [value, encodeURIComponent(value), decodeURIComponent(value)];
+}
+
+async function stopped(p: { child: ChildProcess; exited: Promise<number | null> }) {
+  p.child.kill("SIGTERM");
+  await p.exited;
+}
+
+describe("real process: no secrets or personal data in logs", { timeout: 30_000 }, () => {
+  it("auth flow over real HTTP: nothing sensitive on stdout or stderr", async () => {
+    const p = await listening();
+    const cookies: string[] = [];
+
+    const signUp = await post(p.url, "/api/auth/sign-up/email", {
+      name: NAME,
+      email: EMAIL,
+      password: PASSWORD,
+    });
+    expect(signUp.status).toBe(200);
+    cookies.push(sessionCookieOf(signUp));
+    const wrong = await post(p.url, "/api/auth/sign-in/email", {
+      email: EMAIL,
+      password: "wrong-password-123",
+    });
+    expect(wrong.status).toBe(401);
+    const signIn = await post(p.url, "/api/auth/sign-in/email", {
+      email: EMAIL,
+      password: PASSWORD,
+    });
+    expect(signIn.status).toBe(200);
+    const cookie = sessionCookieOf(signIn);
+    cookies.push(cookie);
+    const me = await fetch(`${p.url}/api/me`, { headers: { cookie } });
+    expect(me.status).toBe(200);
+    expect(await me.json()).toMatchObject({ email: EMAIL });
+    const signOut = await post(p.url, "/api/auth/sign-out", null, cookie);
+    expect(signOut.status).toBe(200);
+    await stopped(p);
+
+    const output = p.out() + p.err();
+    const token = ((await signIn.json()) as { token: string }).token;
+    const secrets = [PASSWORD, "wrong-password-123", baseEnv["BETTER_AUTH_SECRET"] ?? "", token];
+    for (const cookieValue of cookies) secrets.push(...forms(cookieValue.split("=")[1] ?? ""));
+    for (const secret of secrets) expect(output).not.toContain(secret);
+    expect(output).not.toMatch(COOKIE_WITH_VALUE);
+    expect(p.err()).toBe("");
+    // Better Auth's own warning comes out as a pino JSON line (every stdout line must parse)
+    const invalid = lines(p.out()).find((l) => l.msg === "Invalid password");
+    expect(invalid).toMatchObject({ level: 40 });
+  });
+
+  it("database down: errors are logged as type and code, with no query params", async () => {
+    const dbPassword = "DBPASSWORD-sentinel-7f3a";
+    const databaseUrl = `postgres://gw_user:${dbPassword}@127.0.0.1:${await closedPort()}/gw`;
+    const p = await listening({ DATABASE_URL: databaseUrl });
+    const token = "MADEUPTOKEN0123456789abcdefghijkl";
+    const cookie = signedCookie(token, baseEnv["BETTER_AUTH_SECRET"] ?? "");
+
+    const signUp = await post(p.url, "/api/auth/sign-up/email", {
+      name: NAME,
+      email: EMAIL,
+      password: PASSWORD,
+    });
+    const signIn = await post(p.url, "/api/auth/sign-in/email", {
+      email: EMAIL,
+      password: PASSWORD,
+    });
+    const me = await fetch(`${p.url}/api/me`, { headers: { cookie } });
+    await stopped(p);
+
+    expect([signUp.status, signIn.status, me.status]).toEqual([500, 500, 500]);
+    const output = p.out() + p.err();
+    const secrets = [EMAIL, PASSWORD, dbPassword, token, ...forms(cookie.split("=")[1] ?? "")];
+    for (const secret of secrets) expect(output).not.toContain(secret);
+    expect(output).not.toMatch(COOKIE_WITH_VALUE);
+    expect(p.err()).toBe("");
+    // Still useful: each failed request has an error line with the type and code
+    for (const res of [signUp, signIn, me]) {
+      const { requestId } = ((await res.json()) as { error: { requestId: string } }).error;
+      const failed = lines(p.out()).find((l) => l.reqId === requestId && l.level === 50);
+      expect(failed?.err).toEqual({ type: "DrizzleQueryError", code: "ECONNREFUSED" });
+    }
   });
 });

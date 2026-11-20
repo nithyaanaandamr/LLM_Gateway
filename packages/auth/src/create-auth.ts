@@ -35,6 +35,10 @@ export function createAuth({ db, secret, baseURL, trustedOrigins, log }: CreateA
       ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
     },
     logger: { level: "warn", log },
+    // Without this, a non-API error (e.g. a failed query) is also printed to stderr with its
+    // SQL params. With it, the error reaches our error handler, which logs it safely.
+    // see PITFALLS.md: Better Auth prints errors to stderr on its own
+    onAPIError: { throw: true },
   });
 }
 

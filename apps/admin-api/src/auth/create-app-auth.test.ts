@@ -1,4 +1,5 @@
 import { Writable } from "node:stream";
+import { DrizzleQueryError } from "drizzle-orm";
 import Fastify from "fastify";
 import { describe, expect, it } from "vitest";
 import { loggerOptions } from "../logger.ts";
@@ -46,5 +47,26 @@ describe("pinoAuthLog", () => {
     const [line] = parsed();
     expect(line).toMatchObject({ level: 50, msg: "Failed", err: { message: "boom" } });
     expect(JSON.stringify(line)).not.toContain("SENTINEL");
+  });
+
+  it("logs a database error as type and code only, never its query or params", async () => {
+    const { app, parsed } = loggerWithOutput();
+    const cause = Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" });
+    const failed = new DrizzleQueryError(
+      "select 1 where email = $1",
+      ["SENTINEL@example.com"],
+      cause,
+    );
+
+    pinoAuthLog(app.log)("error", "Error", failed);
+    await app.close();
+
+    const [line] = parsed();
+    expect(line).toMatchObject({
+      level: 50,
+      msg: "Error",
+      err: { type: "DrizzleQueryError", code: "ECONNREFUSED" },
+    });
+    expect(JSON.stringify(line)).not.toMatch(/SENTINEL|select/);
   });
 });

@@ -1,8 +1,7 @@
-import diagnostics from "node:diagnostics_channel";
-import type { FastifyInstance, RouteOptions } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildApp, type App } from "./app.ts";
+import type { App } from "./app.ts";
 import type { Config } from "./config.ts";
+import { buildAppAndCollectRoutes, type Route } from "./testing/route-collector.ts";
 import { testConfig } from "./testing/test-config.ts";
 
 // Locked by default: every route buildApp registers must require a session, except these.
@@ -17,11 +16,6 @@ const PUBLIC_ROUTES = [
 
 const DUMMY_UUID = "6f1c1c1e-3c1a-4b8e-9a53-0d6b6a2f7a11";
 
-interface Route {
-  method: string;
-  url: string; // as registered, e.g. /api/projects/:id
-}
-
 const key = (route: Route) => `${route.method} ${route.url}`;
 
 // ":id" -> a UUID, "*" -> a word, so a route like /api/projects/:id can be requested as is
@@ -34,25 +28,6 @@ function errorCode(body: string): string {
     return (JSON.parse(body) as { error: { code: string } }).error.code;
   } catch {
     return "(no error body)";
-  }
-}
-
-// buildApp registers some routes itself, before it returns, so an onRoute hook added afterwards
-// would miss them. Fastify announces each new instance on this channel, before any route exists:
-// we add the hook there. Routes in plugins are seen too (child plugins inherit the hook).
-function buildAppAndCollectRoutes(config: Config): { app: App; routes: Route[] } {
-  const routes: Route[] = [];
-  const onNewInstance = (message: unknown) => {
-    const { fastify } = message as { fastify: FastifyInstance };
-    fastify.addHook("onRoute", (options: RouteOptions) => {
-      for (const method of [options.method].flat()) routes.push({ method, url: options.url });
-    });
-  };
-  diagnostics.subscribe("fastify.initialization", onNewInstance);
-  try {
-    return { app: buildApp(config), routes };
-  } finally {
-    diagnostics.unsubscribe("fastify.initialization", onNewInstance);
   }
 }
 

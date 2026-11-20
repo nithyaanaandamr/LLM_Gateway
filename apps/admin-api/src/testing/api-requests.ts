@@ -5,7 +5,7 @@ import type { Config } from "../config.ts";
 import { headersFor, uniqueIp } from "./auth-requests.ts";
 
 export interface ApiRequest {
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  method: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
   url: string;
   cookie?: string;
   // Any JSON value, sent as a JSON body. Loosely typed on purpose: tests send arrays,

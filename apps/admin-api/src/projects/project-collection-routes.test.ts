@@ -228,6 +228,46 @@ describe("project collection routes", () => {
       expect((await post(other.cookie, { name: "p1" })).statusCode).toBe(201);
     });
 
+    it("keeps the cap exact under parallel creates: 20 at 99 give one 201 and nineteen 409", async () => {
+      const { cookie, userId } = await signUpUser(app, config);
+      for (let n = 1; n <= 99; n++) await insertProject(connection.db, userId, `p${n}`);
+
+      const responses = await Promise.all(
+        Array.from({ length: 20 }, (_, n) => post(cookie, { name: `race${n}` })),
+      );
+
+      const statuses = responses.map((res) => res.statusCode).sort();
+      expect(statuses).toEqual([201, ...Array<number>(19).fill(409)]);
+      for (const res of responses.filter((r) => r.statusCode === 409)) {
+        expect(res.json<ErrorJson>().error).toMatchObject({
+          code: "CONFLICT",
+          message: "Project limit reached (100)",
+        });
+      }
+      expect(await namesOf(userId)).toHaveLength(100);
+    });
+
+    it("caps each user on their own: parallel creates for two users both end at exactly 100", async () => {
+      const [a, b] = [await signUpUser(app, config), await signUpUser(app, config)];
+      for (const { userId } of [a, b]) {
+        for (let n = 1; n <= 99; n++) await insertProject(connection.db, userId, `p${n}`);
+      }
+
+      const responses = await Promise.all(
+        Array.from({ length: 10 }, (_, n) => [
+          post(a.cookie, { name: `a${n}` }),
+          post(b.cookie, { name: `b${n}` }),
+        ]).flat(),
+      );
+
+      const created = responses.filter((res) => res.statusCode === 201);
+      const refused = responses.filter((res) => res.statusCode === 409);
+      expect(created).toHaveLength(2); // one each
+      expect(refused).toHaveLength(18);
+      expect(await namesOf(a.userId)).toHaveLength(100);
+      expect(await namesOf(b.userId)).toHaveLength(100);
+    });
+
     it("answers 403 without an Origin", async () => {
       const { cookie, userId } = await signUpUser(app, config);
 

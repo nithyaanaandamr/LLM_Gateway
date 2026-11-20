@@ -1,6 +1,8 @@
 import { and, asc, eq, sql } from "drizzle-orm";
-import type { Database } from "../client.ts";
+import type { Database, Queryable } from "../client.ts";
 import { projects } from "../schema/index.ts";
+import { insertProject } from "./insert-project.ts";
+import { lockForLimit } from "./limit-lock.ts";
 import { accessibleProjects } from "./project-access.ts";
 
 export { insertProject, isProjectNameTaken } from "./insert-project.ts";
@@ -32,7 +34,7 @@ export async function findAccessibleProject(
   return project;
 }
 
-export function countAccessibleProjects(db: Database, userId: string): Promise<number> {
+export function countAccessibleProjects(db: Queryable, userId: string): Promise<number> {
   return db.$count(projects, accessibleProjects(userId));
 }
 
@@ -63,4 +65,24 @@ export async function deleteProject(
     .where(and(accessibleProjects(userId), eq(projects.id, projectId)))
     .returning({ id: projects.id });
   return deleted.length > 0;
+}
+
+export type InsertWithinLimitResult =
+  { status: "created"; project: Project } | { status: "limit_reached" };
+
+// Exact cap: the user's lock, the count and the insert run in one transaction, so parallel
+// creates for the same user take turns. A duplicate name still throws (the unique constraint
+// rolls the transaction back); see isProjectNameTaken.
+// see PITFALLS.md: Limits are counted under a lock
+export function insertProjectWithinLimit(
+  db: Database,
+  userId: string,
+  name: string,
+  limit: number,
+): Promise<InsertWithinLimitResult> {
+  return db.transaction(async (tx) => {
+    await lockForLimit(tx, "projects", userId);
+    if ((await countAccessibleProjects(tx, userId)) >= limit) return { status: "limit_reached" };
+    return { status: "created", project: await insertProject(tx, userId, name) };
+  });
 }

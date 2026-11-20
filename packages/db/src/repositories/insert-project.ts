@@ -1,4 +1,4 @@
-import type { Database } from "../client.ts";
+import type { Queryable } from "../client.ts";
 import { projects } from "../schema/index.ts";
 import { isUniqueViolation } from "../unique-violation.ts";
 import type { Project } from "./projects.ts";
@@ -6,7 +6,7 @@ import type { Project } from "./projects.ts";
 // The only code that writes owner_id (with project-access.ts, the only code naming it).
 // Pass the logged-in user's ID, never a value from a request body.
 // see PITFALLS.md: Project access goes through one condition
-export async function insertProject(db: Database, userId: string, name: string): Promise<Project> {
+export async function insertProject(db: Queryable, userId: string, name: string): Promise<Project> {
   const [project] = await db.insert(projects).values({ ownerId: userId, name }).returning();
   if (!project) throw new Error("insert into projects returned no row");
   return project;

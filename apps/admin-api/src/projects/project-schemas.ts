@@ -1,8 +1,8 @@
 import type { Project } from "@gw/db";
 import { z } from "zod";
 
-// Soft cap: count then insert, so parallel creates can overshoot
-// see PITFALLS.md: Soft limits can overshoot
+// Exact cap: counted and inserted under a per-user lock (insertProjectWithinLimit)
+// see PITFALLS.md: Limits are counted under a lock
 export const MAX_PROJECTS_PER_USER = 100;
 
 // Control characters (NUL makes Postgres fail with a 500; newlines and BEL break logs and UIs)

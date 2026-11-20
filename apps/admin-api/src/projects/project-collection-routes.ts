@@ -1,6 +1,5 @@
 import {
-  countAccessibleProjects,
-  insertProject,
+  insertProjectWithinLimit,
   listAccessibleProjects,
   type Database,
   type Project,
@@ -21,12 +20,15 @@ export interface ProjectCollectionRoutesOptions {
   db: Database;
 }
 
-// Cap check, then insert; a duplicate name becomes a 409 (see name-conflict.ts)
+// The cap is exact (the repository locks per user); a duplicate name becomes a 409 (see name-conflict.ts)
 async function createProjectFor(db: Database, userId: string, name: string): Promise<Project> {
-  if ((await countAccessibleProjects(db, userId)) >= MAX_PROJECTS_PER_USER) {
+  const result = await insertProjectWithinLimit(db, userId, name, MAX_PROJECTS_PER_USER).catch(
+    nameConflictOrRethrow,
+  );
+  if (result.status === "limit_reached") {
     throw new AppError(409, "CONFLICT", `Project limit reached (${MAX_PROJECTS_PER_USER})`);
   }
-  return insertProject(db, userId, name).catch(nameConflictOrRethrow);
+  return result.project;
 }
 
 export const projectCollectionRoutes: FastifyPluginCallbackZod<ProjectCollectionRoutesOptions> = (

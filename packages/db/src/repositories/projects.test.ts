@@ -9,6 +9,7 @@ import {
   deleteProject,
   findAccessibleProject,
   insertProject,
+  insertProjectWithinLimit,
   isProjectNameTaken,
   listAccessibleProjects,
   renameProject,
@@ -174,5 +175,55 @@ describe("isProjectNameTaken", () => {
     expect(isProjectNameTaken(onInsert)).toBe(true);
     expect(isProjectNameTaken(onRename)).toBe(true);
     expect(isProjectNameTaken(new Error("boom"))).toBe(false);
+  });
+});
+
+describe("insertProjectWithinLimit", () => {
+  async function userWith(count: number): Promise<string> {
+    const userId = await insertUser();
+    for (let n = 1; n <= count; n++) await insertProject(db(), userId, `p${n}`);
+    return userId;
+  }
+
+  it("creates a project below the limit and refuses at the limit", async () => {
+    const me = await userWith(1);
+
+    const first = await insertProjectWithinLimit(db(), me, "second", 2);
+    const second = await insertProjectWithinLimit(db(), me, "third", 2);
+
+    expect(first).toMatchObject({ status: "created", project: { name: "second" } });
+    expect(second).toEqual({ status: "limit_reached" });
+    expect(await countAccessibleProjects(db(), me)).toBe(2);
+  });
+
+  it("counts only the caller's projects", async () => {
+    const [me, other] = [await userWith(0), await userWith(3)];
+    expect(await insertProjectWithinLimit(db(), me, "mine", 1)).toMatchObject({
+      status: "created",
+    });
+    expect(await countAccessibleProjects(db(), other)).toBe(3);
+  });
+
+  it("is exact under parallel calls: 20 at 99 of 100 give one created, 19 refused", async () => {
+    const me = await userWith(99);
+    // Open every pooled connection first, so the calls really overlap
+    await Promise.all(Array.from({ length: 10 }, () => db().execute(sql`select pg_sleep(0.05)`)));
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, (_, n) => insertProjectWithinLimit(db(), me, `race${n}`, 100)),
+    );
+
+    expect(results.filter((r) => r.status === "created")).toHaveLength(1);
+    expect(results.filter((r) => r.status === "limit_reached")).toHaveLength(19);
+    expect(await countAccessibleProjects(db(), me)).toBe(100);
+  });
+
+  it("throws a duplicate-name error and stores nothing extra", async () => {
+    const me = await userWith(1);
+
+    const error = await insertProjectWithinLimit(db(), me, "p1", 5).catch((e: unknown) => e);
+
+    expect(isProjectNameTaken(error)).toBe(true);
+    expect(await countAccessibleProjects(db(), me)).toBe(1);
   });
 });

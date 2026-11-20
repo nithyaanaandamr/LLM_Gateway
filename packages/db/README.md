@@ -25,9 +25,11 @@ Drizzle schema, migrations and the database client.
 
 Plain functions in `src/repositories/` that take `db` and load or store rows. They never encrypt (services in the apps combine the two). Apps never import `drizzle-orm` at runtime, so every query goes through these.
 
-- `projects.ts`: `listAccessibleProjects` (sorted by bytes, whatever the collation), `findAccessibleProject`, `countAccessibleProjects`, `renameProject`, `deleteProject`; re-exports `insertProject` and `isProjectNameTaken` from `insert-project.ts`
+- `projects.ts`: `listAccessibleProjects` (sorted by bytes, whatever the collation), `findAccessibleProject`, `countAccessibleProjects`, `insertProjectWithinLimit`, `renameProject`, `deleteProject`; re-exports `insertProject` and `isProjectNameTaken` from `insert-project.ts`
 
 **Project access.** `project-access.ts` exports `accessibleProjects(userId)`, a SQL condition (today `owner_id = userId`). It is the only code that reads `owner_id` to decide access ([ADR 0011](../../docs/decisions/0011-project-ownership.md)); a test pins that only `project-access.ts` and `insert-project.ts` (the one writer) name it, in this package and in admin-api. It is not exported from the package. Use `findAccessibleProject` or `listAccessibleProjects`: one query checks access and loads the row, and "someone else's" and "missing" both come back as `undefined`. `renameProject` and `deleteProject` take the user ID and apply the same condition, so they are safe even without a prior `findAccessibleProject`.
+
+**Exact limits.** `limit-lock.ts` exports `lockForLimit(tx, scope, id)`: a Postgres advisory lock held until the transaction ends. A cap is exact only if the lock, the count and the insert share one transaction (see `insertProjectWithinLimit`). Parallel requests for the same `(scope, id)` take turns; others don't wait.
 
 Name repository functions after their table (`insertGatewayKey`, not `insert`): the index does `export *` from each file, and two equal names are a TypeScript error.
 

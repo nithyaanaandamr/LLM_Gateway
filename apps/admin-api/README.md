@@ -18,15 +18,15 @@ If a required variable is missing or invalid, the process prints which one and e
 
 Each task adds its vars here.
 
-| Variable             | Required / default | Meaning                                                                                           |
-| -------------------- | ------------------ | ------------------------------------------------------------------------------------------------- |
-| `ADMIN_API_PORT`     | required           | Port to listen on (0 to 65535; 0 = any free port)                                                 |
-| `ADMIN_API_HOST`     | `127.0.0.1`        | Address to listen on. Containers set `0.0.0.0`                                                    |
-| `LOG_LEVEL`          | `info`             | Log detail, see the levels below                                                                  |
-| `DATABASE_URL`       | required           | Postgres URL (`postgres://` or `postgresql://`)                                                   |
-| `BETTER_AUTH_SECRET` | required           | Signs session cookies; at least 32 characters. Changing it logs everyone out                      |
-| `BETTER_AUTH_URL`    | required           | Public origin of this API, no path. Must be `https` unless the host is `localhost` or `127.0.0.1` |
-| `DASHBOARD_ORIGIN`   | required           | Origin the dashboard runs on, no path. Trusted for cookie requests                                |
+| Variable             | Required / default | Meaning                                                                                                                                      |
+| -------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ADMIN_API_PORT`     | required           | Port to listen on (0 to 65535; 0 = any free port)                                                                                            |
+| `ADMIN_API_HOST`     | `127.0.0.1`        | Address to listen on. Containers set `0.0.0.0`                                                                                               |
+| `LOG_LEVEL`          | `info`             | Log detail, see the levels below                                                                                                             |
+| `DATABASE_URL`       | required           | Postgres URL (`postgres://` or `postgresql://`, with a host, no whitespace)                                                                  |
+| `BETTER_AUTH_SECRET` | required           | Signs session cookies; at least 32 characters, no leading or trailing whitespace. Changing it logs everyone out                              |
+| `BETTER_AUTH_URL`    | required           | Public origin of this API: lowercase `scheme://host[:port]`, no default port, no path. `https` unless the host is `localhost` or `127.0.0.1` |
+| `DASHBOARD_ORIGIN`   | required           | Origin the dashboard runs on. Same rules as `BETTER_AUTH_URL`. Trusted for cookie requests                                                   |
 
 `LOG_LEVEL` values: `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`.
 

@@ -115,25 +115,52 @@ describe("loadConfig: auth and database vars", () => {
     expect(loadConfig(envWith({ BETTER_AUTH_SECRET: "x".repeat(32) })).authSecret).toHaveLength(32);
   });
 
-  it.each(["mysql://localhost/db", "localhost:5432/gateway", "not a url"])(
-    "rejects DATABASE_URL %j",
-    (value) => {
-      expect(problemsFor(envWith({ DATABASE_URL: value }))).toEqual([
-        "DATABASE_URL: must be a postgres:// or postgresql:// URL",
-      ]);
+  it("rejects a secret with leading or trailing whitespace, without trimming it", () => {
+    const rule = "BETTER_AUTH_SECRET: must not start or end with whitespace";
+    expect(problemsFor(envWith({ BETTER_AUTH_SECRET: "  " + "x".repeat(30) }))).toEqual([rule]);
+    expect(problemsFor(envWith({ BETTER_AUTH_SECRET: "x".repeat(31) + "\n" }))).toEqual([rule]);
+    expect(problemsFor(envWith({ BETTER_AUTH_SECRET: " ".repeat(40) }))).toEqual([rule]);
+  });
+
+  it("allows whitespace inside a secret", () => {
+    const secret = "correct horse battery staple, 32+";
+    expect(loadConfig(envWith({ BETTER_AUTH_SECRET: secret })).authSecret).toBe(secret);
+  });
+
+  it.each([
+    "mysql://localhost/db",
+    "localhost:5432/gateway",
+    "not a url",
+    " postgres://u:p@h/db",
+    "postgres://u:p@h/db ",
+    "postgres://u:p@h/db\n",
+    "postgres://u:p@h /db",
+    "postgres://",
+    "postgres:///db",
+    "postgres:/x",
+    "postgres://u:p@/db",
+  ])("rejects DATABASE_URL %j", (value) => {
+    expect(problemsFor(envWith({ DATABASE_URL: value }))).toEqual([
+      "DATABASE_URL: must be a postgres:// or postgresql:// URL with a host",
+    ]);
+  });
+
+  // pg falls back to the user name as the database, so a missing database name is allowed
+  it.each(["postgresql://h", "postgres://u:p@h:5433", "postgresql://u:p@db.internal:5432/gateway"])(
+    "accepts DATABASE_URL %s",
+    (url) => {
+      expect(loadConfig(envWith({ DATABASE_URL: url })).databaseUrl).toBe(url);
     },
   );
-
-  it("accepts a postgresql:// URL", () => {
-    const url = "postgresql://u:p@db.internal:5432/gateway";
-    expect(loadConfig(envWith({ DATABASE_URL: url })).databaseUrl).toBe(url);
-  });
 
   it.each(["BETTER_AUTH_URL", "DASHBOARD_ORIGIN"])("rejects a %s that is not an origin", (name) => {
     for (const value of [
       "http://localhost:8081/api",
       "http://localhost:8081/",
       "http://localhost:8081?x=1",
+      "HTTP://LOCALHOST:8081",
+      "https://admin.example.com:443",
+      "http://localhost:80",
       "localhost:8081",
       "not a url",
     ]) {
@@ -143,11 +170,20 @@ describe("loadConfig: auth and database vars", () => {
     }
   });
 
-  it("rejects http:// for BETTER_AUTH_URL on a non-local host", () => {
-    expect(problemsFor(envWith({ BETTER_AUTH_URL: "http://admin.example.com" }))).toEqual([
-      "BETTER_AUTH_URL: must use https unless the host is localhost or 127.0.0.1",
-    ]);
+  it.each(["BETTER_AUTH_URL", "DASHBOARD_ORIGIN"])("rejects a non-http scheme in %s", (name) => {
+    for (const value of ["ftp://x.com", "ws://localhost:8081"]) {
+      expect(problemsFor(envWith({ [name]: value }))).toEqual([`${name}: must use http or https`]);
+    }
   });
+
+  it.each(["BETTER_AUTH_URL", "DASHBOARD_ORIGIN"])(
+    "rejects http:// for %s on a non-local host",
+    (name) => {
+      expect(problemsFor(envWith({ [name]: "http://app.example.com" }))).toEqual([
+        `${name}: must use https unless the host is localhost or 127.0.0.1`,
+      ]);
+    },
+  );
 
   it.each(["http://localhost:8081", "http://127.0.0.1:8081", "https://admin.example.com"])(
     "accepts BETTER_AUTH_URL %s",
@@ -156,10 +192,19 @@ describe("loadConfig: auth and database vars", () => {
     },
   );
 
+  it.each(["http://localhost:5173", "http://127.0.0.1:5173", "https://app.example.com"])(
+    "accepts DASHBOARD_ORIGIN %s",
+    (value) => {
+      expect(loadConfig(envWith({ DASHBOARD_ORIGIN: value })).dashboardOrigin).toBe(value);
+    },
+  );
+
   it("never puts the secret or the database URL in an error", () => {
     const env = envWith({
       BETTER_AUTH_SECRET: "short-SECRET_5d3e",
       DATABASE_URL: "mysql://u:SECRET_8c1a@h/db",
+      BETTER_AUTH_URL: "http://SECRET_1d4f.example.com/path",
+      DASHBOARD_ORIGIN: "ftp://SECRET_2e5a.example.com",
     });
     let message = "";
     try {
@@ -171,5 +216,7 @@ describe("loadConfig: auth and database vars", () => {
     expect(message).toContain("DATABASE_URL");
     expect(message).not.toContain("SECRET_5d3e");
     expect(message).not.toContain("SECRET_8c1a");
+    expect(message).not.toContain("SECRET_1d4f");
+    expect(message).not.toContain("SECRET_2e5a");
   });
 });

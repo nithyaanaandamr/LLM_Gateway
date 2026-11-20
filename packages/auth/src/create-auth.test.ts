@@ -13,6 +13,8 @@ const HTTP_BASE_URL = "http://localhost:8081";
 const HTTPS_BASE_URL = "https://admin.example.com";
 const DASHBOARD_ORIGIN = "http://localhost:5173";
 const PASSWORD = "correct-horse-battery";
+const SECRET = "test-secret-test-secret-test-secret-0123";
+const OTHER_SECRET = "other-secret-other-secret-other-secret-45";
 
 // The rate limit store is shared by every auth instance in this process, so each test uses its own IP
 // see PITFALLS.md: Auth rate limit needs the real client IP
@@ -55,6 +57,11 @@ function signIn(
   return post(auth, baseURL, "/sign-in/email", { email, password }, options);
 }
 
+function getSession(auth: Auth, baseURL: string, cookie: string) {
+  const headers = new Headers({ cookie, [CLIENT_IP_HEADER]: uniqueIp() });
+  return auth.handler(new Request(`${baseURL}/api/auth/get-session`, { headers }));
+}
+
 // "name=value" part of the first Set-Cookie, ready to send back as a Cookie header
 function cookieFrom(response: Response): string {
   const setCookie = response.headers.getSetCookie()[0];
@@ -67,10 +74,10 @@ describe("createAuth", () => {
   let auth: Auth;
   let httpsAuth: Auth;
 
-  function authFor(baseURL: string): Auth {
+  function authFor(baseURL: string, secret = SECRET): Auth {
     return createAuth({
       db: connection.db,
-      secret: "test-secret-test-secret-test-secret-0123",
+      secret,
       baseURL,
       trustedOrigins: [baseURL, DASHBOARD_ORIGIN],
       log: () => {},
@@ -134,6 +141,20 @@ describe("createAuth", () => {
     expect(setCookie).toMatch(/^__Secure-better-auth\.session_token=/);
     expect(setCookie).toMatch(/; Secure/i);
     expect(setCookie).toMatch(/HttpOnly/i);
+  });
+
+  it("only accepts cookies signed with its own secret", async () => {
+    const signedUp = await signUp(auth, HTTP_BASE_URL, "secret@example.com");
+    const cookie = cookieFrom(signedUp);
+
+    const sameSecret = await getSession(auth, HTTP_BASE_URL, cookie);
+    const body = (await sameSecret.json()) as { user: { email: string } } | null;
+    expect(body?.user.email).toBe("secret@example.com");
+
+    const otherAuth = authFor(HTTP_BASE_URL, OTHER_SECRET);
+    const otherSecret = await getSession(otherAuth, HTTP_BASE_URL, cookie);
+    expect(otherSecret.status).toBe(200);
+    expect(await otherSecret.json()).toBeNull();
   });
 
   it("rejects a sign-out with a hostile Origin, even under Vitest", async () => {

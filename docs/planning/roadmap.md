@@ -13,7 +13,7 @@
 
 ## Later (post-v1)
 
-Budget alert emails, teams ([ADR 0011](../decisions/0011-project-ownership.md)), second provider, response caching, opt-in prompt logging, dedicated log store.
+Budget alert emails, audit log of admin actions shown to the user (key created or revoked, provider key set or removed, project deleted, sign-ins; built with alert emails, which use the same events), teams ([ADR 0011](../decisions/0011-project-ownership.md)), second provider, response caching, opt-in prompt logging, dedicated log store.
 
 ## Professional nice-to-haves
 

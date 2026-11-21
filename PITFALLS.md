@@ -459,3 +459,7 @@ It does not refuse all format characters (`\p{Cf}`): that would break ZWJ emoji 
 ## Fastify onRoute errors in callback plugins are uncaught
 
 The project scope must stop a route that has no `:projectId`. Throwing from an `onRoute` hook doesn't do it: avvio catches only promise rejections, so a synchronous throw inside a callback-style plugin (our `FastifyPluginCallbackZod` convention) becomes an `uncaughtException`, and `ready()` never settles. Making the outer plugin async doesn't help: what matters is the plugin that registers the route. `projectScope` therefore only records the bad URLs in `onRoute` (in a `Set`, because Fastify adds a HEAD route for each GET) and throws from an `onReady` hook, so `ready()` rejects with a message that lists them. `require-project.test.ts` checks callback and async plugins, at the top and in child plugins.
+
+## E2E reads the database like the gateway
+
+`apps/admin-api/src/e2e/phase-1-flow.test.ts` checks the hand-off to Phase 2: with only the gateway key, find its row by hash, then decrypt the project's provider key. It uses a direct Drizzle query for the hash lookup because the gateway's lookup function doesn't exist yet. When Phase 2 adds `findGatewayKeyByHash`, switch the test to it, so the test follows the code the gateway really runs.

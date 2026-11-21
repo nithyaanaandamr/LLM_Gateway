@@ -48,6 +48,9 @@ Status is `Open` or `Done`. The board bot sets `Done` after merge.
 | Provider key accepted with a light check: trim, 20 to 512 characters, no `gw_live_` prefix, no control characters, no provider format check (minimum 20 added 2026-11-21 so `lastFour` can't show most of a key; control characters refused 2026-11-21, owner confirmed: a NUL gave a 500, and a header can't carry them) | Decided | [api.md](../../architecture/api.md#provider-key): GW-019, GW-036 (decision 4, variant) |
 | Phase 1 end-to-end test runs the real server process over HTTP | Decided | [board.md](../board.md): GW-021 (decision 5A) |
 | Repository writes check access too (defence in depth) | Decided | [security.md](../../architecture/security.md#authorization): GW-018 |
+| Audit log of admin actions is post-v1, built with budget alert emails (same events) | Decided | [roadmap.md](../roadmap.md): Later (post-v1) |
+| Post-deploy smoke test against the live URL | Decided | [board.md](../board.md): GW-038 |
+| Project delete stays permanent in v1; a 30-day restore window comes later | Decided | [board.md](../board.md): GW-039 |
 | Keep the blocking lock; GW-034 (rate limit admin writes) ships before first deployment | Decided | [PITFALLS.md](../../../PITFALLS.md): Lock waits share the database pool |
 | Every limit is one atomic check-and-count | Decided | [ADR 0013](../../decisions/0013-atomic-limits.md): GW-018 |
 | Not your project answers 404, not 403 | Decided | [security.md](../../architecture/security.md#authorization) |

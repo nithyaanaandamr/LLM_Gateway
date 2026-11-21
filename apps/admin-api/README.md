@@ -78,6 +78,8 @@ Helpers are in `src/testing/auth-requests.ts` (test-only, not built):
 - `createProject(app, config, cookie, name?)` (`testing/project-requests.ts`): creates a project through the API and returns it.
 - `buildAppAndCollectRoutes(config)` (`testing/route-collector.ts`): builds the app and lists every route, as the inventory tests do.
 - `startListening(script, env)`, `stopServer`, `killAllServers`, `logLines` (`testing/server-process.ts`): run a script as a real server process, for real-process tests.
+- `request(url, { method, origin, body, cookie })`, `sessionCookieOf`, `forms`, `COOKIE_WITH_VALUE` (`testing/fetch-requests.ts`): requests over real HTTP, for real-process tests.
+- `src/e2e/phase-1-flow.test.ts`: the Phase 1 end-to-end test. It runs `src/main.ts` as a real process, drives it over HTTP and reads the database the way the gateway will.
 - `uniqueIp()`: the rate limit is per IP and its memory is shared by every app in a test file, so each request needs its own IP.
 - `testConfig()` gives a fresh migrated database and a random secret. Tests must send `Origin` (even for DELETE and POST on protected routes).
 - To test database failures in a real process (`src/server-process.test.ts`), point `DATABASE_URL` at a closed port and send a made-up token **signed with the secret** (`signedCookie`). An unsigned cookie is rejected before the database is touched.

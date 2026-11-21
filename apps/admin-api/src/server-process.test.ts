@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { COOKIE_WITH_VALUE, forms, request, sessionCookieOf } from "./testing/fetch-requests.ts";
 import { killAllServers, logLines, startListening, stopServer } from "./testing/server-process.ts";
 import { testConfig } from "./testing/test-config.ts";
 import { testEnv } from "./testing/test-env.ts";
@@ -98,29 +99,16 @@ const PASSWORD = "correct-horse-battery";
 const EMAIL = "realproc@example.com";
 const NAME = "Real Process";
 const SESSION_COOKIE_NAME = "better-auth.session_token";
-// Any session_token cookie with a value (the name may carry a __Secure- prefix)
-const COOKIE_WITH_VALUE = /session_token=[^\s"\\;]+/;
-
 type Json = Record<string, unknown>;
 
 // JSON POST with the dashboard Origin, which Better Auth and requireTrustedOrigin require
-function post(url: string, path: string, body: Json | null, cookie?: string) {
-  return fetch(`${url}${path}`, {
+function post(url: string, path: string, body?: Json, cookie?: string) {
+  return request(`${url}${path}`, {
     method: "POST",
-    headers: {
-      ...(body === null ? {} : { "content-type": "application/json" }),
-      origin: baseEnv["DASHBOARD_ORIGIN"] ?? "",
-      ...(cookie ? { cookie } : {}),
-    },
-    ...(body === null ? {} : { body: JSON.stringify(body) }),
+    origin: baseEnv["DASHBOARD_ORIGIN"] ?? "",
+    body,
+    cookie,
   });
-}
-
-// "name=value" from the response's session cookie, as a browser would send it back
-function sessionCookieOf(res: Response): string {
-  const found = res.headers.getSetCookie().find((c) => c.includes("session_token="));
-  if (!found) throw new Error("no session cookie in response");
-  return found.split(";")[0] ?? "";
 }
 
 // What a real cookie looks like: <token>.<base64 HMAC-SHA256 of the token>, URL-encoded.
@@ -138,11 +126,6 @@ async function closedPort(): Promise<number> {
   const port = typeof address === "object" && address !== null ? address.port : 0;
   await new Promise((r) => server.close(r));
   return port;
-}
-
-// Every string a leak could show up as: raw, URL-encoded and decoded forms of a cookie value
-function forms(value: string): string[] {
-  return [value, encodeURIComponent(value), decodeURIComponent(value)];
 }
 
 describe("real process: no secrets or personal data in logs", { timeout: 30_000 }, () => {
@@ -172,7 +155,7 @@ describe("real process: no secrets or personal data in logs", { timeout: 30_000 
     const me = await fetch(`${p.url}/api/me`, { headers: { cookie } });
     expect(me.status).toBe(200);
     expect(await me.json()).toMatchObject({ email: EMAIL });
-    const signOut = await post(p.url, "/api/auth/sign-out", null, cookie);
+    const signOut = await post(p.url, "/api/auth/sign-out", undefined, cookie);
     expect(signOut.status).toBe(200);
     await stopServer(p);
 

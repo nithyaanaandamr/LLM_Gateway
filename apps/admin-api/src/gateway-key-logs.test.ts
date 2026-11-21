@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { request, sessionCookieOf } from "./testing/fetch-requests.ts";
 import { killAllServers, logLines, startListening, stopServer } from "./testing/server-process.ts";
 import { testConfig } from "./testing/test-config.ts";
 import { testEnv } from "./testing/test-env.ts";
@@ -15,18 +16,8 @@ beforeAll(async () => {
 
 afterEach(killAllServers);
 
-// JSON request with the dashboard Origin, which the protected scope requires on writes
-function send(url: string, method: string, body: unknown, cookie?: string) {
-  return fetch(url, {
-    method,
-    headers: {
-      origin: env["DASHBOARD_ORIGIN"] ?? "",
-      ...(body === undefined ? {} : { "content-type": "application/json" }),
-      ...(cookie ? { cookie } : {}),
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-}
+const send = (url: string, method: string, body?: unknown, cookie?: string) =>
+  request(url, { method, origin: env["DASHBOARD_ORIGIN"] ?? "", body, cookie });
 
 describe("real process: gateway keys stay out of the logs", { timeout: 30_000 }, () => {
   it("issue, list and revoke over real HTTP: the key is on neither stdout nor stderr", async () => {
@@ -37,8 +28,7 @@ describe("real process: gateway keys stay out of the logs", { timeout: 30_000 },
       password: "correct-horse-battery",
     });
     expect(signUp.status).toBe(200);
-    const cookie = signUp.headers.getSetCookie().find((c) => c.includes("session_token="));
-    const session = cookie?.split(";")[0] ?? "";
+    const session = sessionCookieOf(signUp);
     const project = await send(`${p.url}/api/projects`, "POST", { name: "Prod" }, session);
     const { id: projectId } = (await project.json()) as { id: string };
     const base = `${p.url}/api/projects/${projectId}/gateway-keys`;

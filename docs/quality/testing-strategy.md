@@ -8,6 +8,7 @@
 | Unit | Vitest | Next to code | Every PR |
 | Component a11y | Vitest + `vitest-axe` | `apps/dashboard` | Every PR |
 | Integration | Vitest + Testcontainers (real Postgres, Redis) + fake provider | Each app | Every PR |
+| API E2E | Vitest, real process over HTTP | `apps/admin-api/src/e2e` | Every PR |
 | E2E | Playwright | `tests/e2e` | Every PR |
 | Visual regression | Playwright `toHaveScreenshot()` | `tests/e2e` | Every PR |
 | Page a11y | Playwright + `@axe-core/playwright` | `tests/e2e` | Every PR |

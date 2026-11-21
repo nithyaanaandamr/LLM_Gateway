@@ -11,6 +11,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-021 | Phase 1 E2E test | 1 | Test: sign up → create project → add provider key → get gateway key |
 
 ## Ready
 
@@ -21,7 +22,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-021 | Phase 1 E2E test | 1 | Test: sign up → create project → add provider key → get gateway key |
 | GW-007 | Fake provider server | 2 | Streaming + non-streaming; configurable delay, error, disconnect |
 | GW-009 | Research Redis failure handling | 2 | Findings recorded in a new ADR superseding 0008 |
 | GW-023 | Source maps in `start` and `dev` | 1 | Apps run Node with `--enable-source-maps`; a 5xx stack trace in the logs points at `.ts` lines; ADR 0012 recipe updated |
@@ -38,6 +38,8 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-035 | Master key rotation | 2 | Config takes a current key plus older versioned keys; a command re-encrypts every provider key to the current version; the gateway decrypts both during rotation; runbook in the README |
 | GW-036 | Check the provider key with the provider on save | 2 | PUT tests the key against the provider's models endpoint (fake provider in tests); a rejected key: 400 with a clear message; a provider timeout doesn't lose the save; never logs the key |
 | GW-037 | Database pool size setting and pooler plan for deployment | 1 | `DATABASE_POOL_MAX` config (default 10, validated at startup) used by `createDb`; README gives the formula (app instances × pool size + other apps ≤ Postgres `max_connections`, with headroom); pool wait timeout (`connectionTimeoutMillis`) decided; PgBouncer (transaction mode) or the cloud equivalent chosen once ADR 0009's host is picked; confirm advisory *transaction* locks work under it |
+| GW-038 | Post-deploy smoke test | 6 | A script runs the Phase 1 flow against a live URL over HTTPS, taking the API URL and the trusted origin as inputs: sign in a dedicated test account (credentials from the secret store, not a new sign-up each run) → create a project → set a provider key → issue, list and revoke a gateway key → delete the project; exits non-zero and names the failed step; cleans up even when a step fails; never prints the password, session token or full keys; runs after every deploy and by hand; the provider-key step still works once GW-036 checks keys with the provider; runbook in the README |
+| GW-039 | Restore a deleted project within 30 days | 4 | `DELETE /api/projects/:projectId` sets `deleted_at` instead of removing the row, and revokes all the project's gateway keys at once (clearing their cache, GW-033); a deleted project is missing from the list and its routes answer 404, like "not yours"; `POST /api/projects/:projectId/restore` by the owner within 30 days brings back the project and its settings, never its gateway keys (the owner issues new ones), and the ownership test covers this route; after 30 days restore answers 404 and a daily worker job hard-deletes the project with today's cascade; a deleted project doesn't hold its name or count toward the 100-project cap, so restore takes the cap lock (ADR 0013) and answers 409 if the name is taken or the cap is full; whether the provider key is kept for the 30 days or deleted at once is decided and written in security.md; request logs keep pointing at the same project ID; data-model decision 4 and api.md updated |
 
 ## Done
 

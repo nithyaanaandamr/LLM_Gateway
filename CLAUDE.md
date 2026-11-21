@@ -16,6 +16,7 @@ LLM Gateway: a BYOK proxy with key management, rate limits, budget caps, usage t
 - Record new topics and their state in the sprint's Open topics table ([docs/planning/README.md](docs/planning/README.md#open-topics)).
 
 ## Code structure
+- Read [docs/architecture/code-structure.md](docs/architecture/code-structure.md) before adding code: layers, import rules, where new code goes.
 - Small, focused functions and files: one job each.
 - Shared code lives in `packages/`; apps never import from other apps.
 - Consistent naming within a package; follow the surrounding code.

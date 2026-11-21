@@ -4,6 +4,7 @@
 |---|---|---|
 | **0. Foundations** | Repo, tooling, local infra, CI | `pnpm test` and CI pass on an empty app; `pnpm infra:up` works |
 | **1. Data and admin core** | Schema, dashboard auth, projects, encrypted provider keys, gateway key issuance | A user can sign up, add a provider key and get a gateway key (via API) |
+| **1.5 Structure and guardrails** | Housekeeping before Phase 2, with no behaviour change: written rules for how the code is layered (what each layer may import, how layers talk), checked by ESLint; small Phase 1 leftovers | Breaking any rule in the code structure doc fails CI; a newcomer can find where new code belongs from that doc |
 | **2. Gateway hot path** | Fake provider, key lookup, pass-through (one provider, streaming), rate limits, budget enforcement, Redis failure mode | A real SDK call works through the gateway and limits are enforced |
 | **3. Cold path** | Queue, worker, cost calculation, pricing table, rollups, partial-usage logging | Every request has a log row with correct cost; rollups populate |
 | **4. Dashboard** | Key management UI, spend over time, per-key breakdown | Owner can manage keys and see spend; a11y and visual tests pass |

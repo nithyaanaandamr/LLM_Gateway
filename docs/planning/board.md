@@ -11,11 +11,17 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-040 | Close Sprint 02, start Sprint 03 | 1 | Sprint 02 dates and retro filled; session-token topic decided (GW-043); Sprint 03 file with goal, scope and open topics; roadmap Phase 1.5 row |
 
 ## Ready
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-041 | Code structure spec | 1.5 | `docs/architecture/code-structure.md` names each layer (HTTP routes and hooks, services, repositories, schema, shared packages, test helpers), what each may import, and how layers talk (calls, errors, dependencies passed in); says when a route may call a repository without a service; covers every app, package and tool, including the planned gateway and worker; an ADR records the layering and the lint tool; owner approved |
+| GW-042 | Enforce code boundaries in ESLint | 1.5 | Every import rule in `code-structure.md` (GW-041) is checked by `pnpm lint` in CI, including: apps never import other apps; `testing/` helpers and `@gw/db/testing` only in tests; no Drizzle in app runtime code; `shared`'s main entry stays browser-safe; no import cycles. One deliberately bad import per rule fails lint (tested); existing code passes or is fixed; Prettier can't reformat Markdown from any folder; CLAUDE.md points to the doc |
+| GW-023 | Source maps in `start` and `dev` | 1 | Apps run Node with `--enable-source-maps`; a 5xx stack trace in the logs points at `.ts` lines; ADR 0012 recipe updated |
+| GW-024 | Move error shape types to `shared` | 1 | `ErrorBody` and `ErrorCode` (types only) live in `packages/shared`; admin-api imports them; usable by the dashboard |
+| GW-025 | Fix board-bot PITFALLS reference | 0 | `tools/board-bot/tsconfig.json` comment cites the real heading "Node runs TypeScript directly" |
 
 ## Backlog
 
@@ -23,9 +29,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 |---|---|---|---|
 | GW-007 | Fake provider server | 2 | Streaming + non-streaming; configurable delay, error, disconnect |
 | GW-009 | Research Redis failure handling | 2 | Findings recorded in a new ADR superseding 0008 |
-| GW-023 | Source maps in `start` and `dev` | 1 | Apps run Node with `--enable-source-maps`; a 5xx stack trace in the logs points at `.ts` lines; ADR 0012 recipe updated |
-| GW-024 | Move error shape types to `shared` | 1 | `ErrorBody` and `ErrorCode` (types only) live in `packages/shared`; admin-api imports them; usable by the dashboard |
-| GW-025 | Fix board-bot PITFALLS reference | 0 | `tools/board-bot/tsconfig.json` comment cites the real heading "Node runs TypeScript directly" |
 | GW-027 | Readiness route `GET /ready` | 1 | 200 when a DB query succeeds, 503 in our error shape when not; `routes/health.ts` comment updated (it promises this "with the first DB-backed task") |
 | GW-028 | Admin API behind a proxy: trust proxy setting | 1 | `ADMIN_API_TRUST_PROXY` config; `request.ip` is the real client IP behind Cloudflare Tunnel / ALB; a test shows two clients get separate auth rate-limit buckets |
 | GW-029 | Shared auth rate-limit store (Redis) | 1 | Limits hold across two admin-api instances and a restart; uses Better Auth `secondaryStorage` or `customStorage` on our Redis |
@@ -39,6 +42,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-037 | Database pool size setting and pooler plan for deployment | 1 | `DATABASE_POOL_MAX` config (default 10, validated at startup) used by `createDb`; README gives the formula (app instances × pool size + other apps ≤ Postgres `max_connections`, with headroom); pool wait timeout (`connectionTimeoutMillis`) decided; PgBouncer (transaction mode) or the cloud equivalent chosen once ADR 0009's host is picked; confirm advisory *transaction* locks work under it |
 | GW-038 | Post-deploy smoke test | 6 | A script runs the Phase 1 flow against a live URL over HTTPS, taking the API URL and the trusted origin as inputs: sign in a dedicated test account (credentials from the secret store, not a new sign-up each run) → create a project → set a provider key → issue, list and revoke a gateway key → delete the project; exits non-zero and names the failed step; cleans up even when a step fails; never prints the password, session token or full keys; runs after every deploy and by hand; the provider-key step still works once GW-036 checks keys with the provider; runbook in the README |
 | GW-039 | Restore a deleted project within 30 days | 4 | `DELETE /api/projects/:projectId` sets `deleted_at` instead of removing the row, and revokes all the project's gateway keys at once (clearing their cache, GW-033); a deleted project is missing from the list and its routes answer 404, like "not yours"; `POST /api/projects/:projectId/restore` by the owner within 30 days brings back the project and its settings, never its gateway keys (the owner issues new ones), and the ownership test covers this route; after 30 days restore answers 404 and a daily worker job hard-deletes the project with today's cascade; a deleted project doesn't hold its name or count toward the 100-project cap, so restore takes the cap lock (ADR 0013) and answers 409 if the name is taken or the cap is full; whether the provider key is kept for the 30 days or deleted at once is decided and written in security.md; request logs keep pointing at the same project ID; data-model decision 4 and api.md updated |
+| GW-043 | Protect session tokens at rest | 1 | **Required before first deployment.** Reading the database no longer gives usable sessions: the stored session token is a hash (or Better Auth's equivalent; find how it supports this); a test shows a stored value can't be used as a cookie; what happens to existing sessions is decided; PITFALLS "Session tokens in plain text" updated |
 
 ## Done
 

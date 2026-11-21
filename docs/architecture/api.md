@@ -89,7 +89,7 @@ ProviderKey = { provider: "openai", lastFour: string, createdAt: string, updated
 
 ### Gateway keys
 
-**Status: Planned (GW-020).** The contract GW-020 builds to; details change only with a note here.
+**Status: Built (GW-020).**
 
 | Method | Path | Body | Success | Errors |
 |---|---|---|---|---|

@@ -11,6 +11,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-020 | Gateway key API | 1 | Issue (shown once), list (prefix only), revoke; only hash stored |
 
 ## Ready
 
@@ -22,7 +23,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
 | GW-019 | Provider key API | 1 | Set/replace/remove one provider key per project; stored encrypted; never returned in full |
-| GW-020 | Gateway key API | 1 | Issue (shown once), list (prefix only), revoke; only hash stored |
 | GW-021 | Phase 1 E2E test | 1 | Test: sign up → create project → add provider key → get gateway key |
 | GW-007 | Fake provider server | 2 | Streaming + non-streaming; configurable delay, error, disconnect |
 | GW-009 | Research Redis failure handling | 2 | Findings recorded in a new ADR superseding 0008 |

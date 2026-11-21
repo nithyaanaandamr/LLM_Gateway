@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-021 | Phase 1 E2E test | 1 | Test: sign up → create project → add provider key → get gateway key |
 
 ## Ready
 
@@ -65,3 +64,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-018 | Projects API | 1 | 2026-11-21 |
 | GW-020 | Gateway key API | 1 | 2026-11-21 |
 | GW-019 | Provider key API | 1 | 2026-11-21 |
+| GW-021 | Phase 1 E2E test | 1 | 2026-11-21 |

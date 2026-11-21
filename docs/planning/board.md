@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-040 | Close Sprint 02, start Sprint 03 | 1 | Sprint 02 dates and retro filled; session-token topic decided (GW-043); Sprint 03 file with goal, scope and open topics; roadmap Phase 1.5 row |
 
 ## Ready
 
@@ -69,3 +68,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-020 | Gateway key API | 1 | 2026-11-21 |
 | GW-019 | Provider key API | 1 | 2026-11-21 |
 | GW-021 | Phase 1 E2E test | 1 | 2026-11-21 |
+| GW-040 | Close Sprint 02, start Sprint 03 | 1 | 2026-11-21 |

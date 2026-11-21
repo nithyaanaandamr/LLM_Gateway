@@ -17,7 +17,7 @@
 | GW-019 | Provider key API | Done |
 | GW-020 | Gateway key API | Done |
 | GW-021 | Phase 1 E2E test | Done |
-| GW-040 | Close Sprint 02, start Sprint 03 | Open |
+| GW-040 | Close Sprint 02, start Sprint 03 | Done |
 
 Status is `Open` or `Done`. The board bot sets `Done` after merge.
 

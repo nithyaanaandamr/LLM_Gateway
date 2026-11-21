@@ -249,7 +249,7 @@ App tables discussed with the owner on 2026-10-23; logs on 2026-10-24.
 | 1 | Postgres schemas | `auth` + `app` + `logs` |
 | 2 | ID type (app tables) | UUID v4 via `gen_random_uuid()` |
 | 3 | Revoking a gateway key | Soft: set `revoked_at`, keep the row |
-| 4 | Deleting a project | Hard delete with cascade (v1) |
+| 4 | Deleting a project | Hard delete with cascade (v1); a 30-day restore window is Backlog GW-039 |
 | 5 | Ownership (`owner_id` vs teams) | `owner_id` now; teams later via one access check ([ADR 0011](../decisions/0011-project-ownership.md)) |
 | 6 | Password hashing | Keep Better Auth's default, scrypt |
 | 7 | Provider key display | Store the last 4 chars |

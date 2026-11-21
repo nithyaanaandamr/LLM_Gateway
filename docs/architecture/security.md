@@ -5,6 +5,9 @@
 - Users paste their own provider key. No money passes through us.
 - Provider keys are encrypted at rest with **AES-GCM**. Stored as `nonce + ciphertext + tag`.
 - The master key lives in a secret store (later KMS with envelope encryption), never in code or the DB.
+- `MASTER_KEY` is checked at startup (exact 32-byte base64 format); a bad key stops the process instead of failing a user's request later.
+- AAD (additional authenticated data) = the project ID: a ciphertext copied into another project's row won't decrypt.
+- The admin API returns only `lastFour` and never decrypts: it stores the last 4 characters when the key is saved and selects only summary columns.
 
 ## Gateway keys
 

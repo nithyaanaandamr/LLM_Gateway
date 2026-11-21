@@ -1,7 +1,9 @@
+import { inspect } from "node:util";
 import { describe, expect, it } from "vitest";
 import { ConfigError, loadConfig } from "./config.ts";
 
 const SECRET = "test-secret-test-secret-test-secret-0123";
+const MASTER_KEY = Buffer.alloc(32, 7).toString("base64");
 const DATABASE_URL = "postgres://gateway:db-password-9f2c@localhost:5432/gateway";
 
 // Valid values for every required var; tests override or remove one
@@ -11,6 +13,7 @@ const VALID_ENV = {
   BETTER_AUTH_SECRET: SECRET,
   BETTER_AUTH_URL: "http://localhost:8081",
   DASHBOARD_ORIGIN: "http://localhost:5173",
+  MASTER_KEY,
 };
 
 function envWith(
@@ -31,7 +34,8 @@ function problemsFor(env: Record<string, string | undefined>): string[] {
 
 describe("loadConfig", () => {
   it("applies defaults for a minimal env", () => {
-    expect(loadConfig(VALID_ENV)).toEqual({
+    const { masterKey, ...rest } = loadConfig(VALID_ENV);
+    expect(rest).toEqual({
       port: 8081,
       host: "127.0.0.1",
       logLevel: "info",
@@ -40,6 +44,7 @@ describe("loadConfig", () => {
       authBaseUrl: "http://localhost:8081",
       dashboardOrigin: "http://localhost:5173",
     });
+    expect(masterKey.version).toBe(1);
   });
 
   it("uses the port, host and log level when set", () => {
@@ -100,13 +105,16 @@ describe("loadConfig", () => {
 });
 
 describe("loadConfig: auth and database vars", () => {
-  it.each(["DATABASE_URL", "BETTER_AUTH_SECRET", "BETTER_AUTH_URL", "DASHBOARD_ORIGIN"])(
-    "reports %s as required when missing or empty",
-    (name) => {
-      expect(problemsFor(envWith({ [name]: undefined }))).toEqual([`${name}: is required`]);
-      expect(problemsFor(envWith({ [name]: "" }))).toEqual([`${name}: is required`]);
-    },
-  );
+  it.each([
+    "DATABASE_URL",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "DASHBOARD_ORIGIN",
+    "MASTER_KEY",
+  ])("reports %s as required when missing or empty", (name) => {
+    expect(problemsFor(envWith({ [name]: undefined }))).toEqual([`${name}: is required`]);
+    expect(problemsFor(envWith({ [name]: "" }))).toEqual([`${name}: is required`]);
+  });
 
   it("rejects a secret under 32 characters", () => {
     expect(problemsFor(envWith({ BETTER_AUTH_SECRET: "x".repeat(31) }))).toEqual([
@@ -218,5 +226,53 @@ describe("loadConfig: auth and database vars", () => {
     expect(message).not.toContain("SECRET_8c1a");
     expect(message).not.toContain("SECRET_1d4f");
     expect(message).not.toContain("SECRET_2e5a");
+  });
+});
+
+describe("loadConfig: MASTER_KEY", () => {
+  const RULE = "MASTER_KEY: Invalid master key: ";
+
+  it("loads a valid key as version 1", () => {
+    const { masterKey } = loadConfig(envWith({ MASTER_KEY }));
+    expect(masterKey.version).toBe(1);
+    expect(masterKey.key.export().toString("base64")).toBe(MASTER_KEY);
+  });
+
+  it("rejects 31 bytes", () => {
+    const problems = problemsFor(envWith({ MASTER_KEY: Buffer.alloc(31, 7).toString("base64") }));
+    expect(problems).toEqual([`${RULE}must be 44 base64 characters (32 bytes)`]);
+  });
+
+  it("rejects a key with a trailing newline", () => {
+    expect(problemsFor(envWith({ MASTER_KEY: MASTER_KEY + "\n" }))).toEqual([
+      `${RULE}must be 44 base64 characters (32 bytes)`,
+    ]);
+  });
+
+  it("rejects a non-canonical spelling (last character has unused bits)", () => {
+    // 32 bytes of zeros end in "A="; "B=" decodes to the same bytes
+    const canonical = Buffer.alloc(32).toString("base64");
+    const sloppy = canonical.slice(0, -2) + "B=";
+    expect(problemsFor(envWith({ MASTER_KEY: sloppy }))).toEqual([
+      `${RULE}must be canonical base64`,
+    ]);
+  });
+
+  it("never puts the value in the error", () => {
+    const value = "SENTINEL_" + "k".repeat(40);
+    let message = "";
+    try {
+      loadConfig(envWith({ MASTER_KEY: value }));
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toContain("MASTER_KEY");
+    expect(message).not.toContain("SENTINEL_");
+  });
+
+  it("inspect(config) does not show the key", () => {
+    const shown = inspect(loadConfig(envWith({ MASTER_KEY })), { depth: 5 });
+    expect(shown).not.toContain(MASTER_KEY);
+    expect(shown).not.toContain(Buffer.alloc(32, 7).toString("hex"));
   });
 });

@@ -27,6 +27,7 @@ Each task adds its vars here.
 | `BETTER_AUTH_SECRET` | required           | Signs session cookies; at least 32 characters, no leading or trailing whitespace. Changing it logs everyone out                              |
 | `BETTER_AUTH_URL`    | required           | Public origin of this API: lowercase `scheme://host[:port]`, no default port, no path. `https` unless the host is `localhost` or `127.0.0.1` |
 | `DASHBOARD_ORIGIN`   | required           | Origin the dashboard runs on. Same rules as `BETTER_AUTH_URL`. Trusted for cookie requests                                                   |
+| `MASTER_KEY`         | required           | Encrypts provider keys (AES-256-GCM). 32 random bytes as 44 canonical base64 characters: `openssl rand -base64 32`. Checked at startup. Changing it makes stored provider keys unreadable |
 
 `LOG_LEVEL` values: `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent`.
 

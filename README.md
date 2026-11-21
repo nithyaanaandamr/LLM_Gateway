@@ -68,16 +68,19 @@ Versions last checked: 2026-10-22 (Node 24.22.1, pnpm 12.14.0, OrbStack 2.2.4, D
 
 ### One-time dev setup
 
-Copy the env file, then generate the auth secret (needed by the admin API):
+Copy the env file, then generate two secrets (both needed by the admin API):
 
 ```sh
 cp .env.example .env
-openssl rand -base64 32   # copy the output
+openssl rand -base64 32   # 1st output: BETTER_AUTH_SECRET
+openssl rand -base64 32   # 2nd output: MASTER_KEY
 ```
 
-In `.env`, paste it right after the `=` on the existing `BETTER_AUTH_SECRET=` line, so the line reads `BETTER_AUTH_SECRET=<the output>`. Don't add a second line.
+In `.env`, paste each one right after the `=` on its existing line (`BETTER_AUTH_SECRET=` and `MASTER_KEY=`), so the line reads `BETTER_AUTH_SECRET=<the output>`. Don't add second lines.
 
-`.env` is git-ignored. The secret signs session cookies, and changing it logs everyone out. Dev only: production values come from the platform's secret store. Other values are described in the comments of `.env.example`.
+`.env` is git-ignored. Dev only: production values come from the platform's secret store. Other values are described in the comments of `.env.example`.
+- `BETTER_AUTH_SECRET` signs session cookies; changing it logs everyone out.
+- `MASTER_KEY` encrypts stored provider keys; changing it makes them unreadable (see PITFALLS.md: Changing MASTER_KEY makes stored provider keys unreadable).
 
 ### Scripts
 

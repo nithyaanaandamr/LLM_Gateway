@@ -38,6 +38,7 @@ export function buildApp(config: Config) {
     auth,
     trustedOrigins: trustedOrigins(config),
     db: connection.db,
+    masterKey: config.masterKey,
   });
   return app;
 }

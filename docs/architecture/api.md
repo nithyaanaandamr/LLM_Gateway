@@ -18,8 +18,8 @@ Errors: `401` bad key, `429` rate limit, `402`/`429` budget exceeded *(decide)*,
 |---|---|
 | Auth | Better Auth, mounted by us: see [Auth and session routes](#auth-and-session-routes) |
 | Projects | `GET/POST /api/projects`, `GET/PATCH/DELETE /api/projects/:projectId`: see [Projects](#projects) |
-| Provider key | `GET/PUT/DELETE /api/projects/:projectId/provider-key`: see [Provider key](#provider-key) *(planned)* |
-| Gateway keys | `GET/POST /api/projects/:projectId/gateway-keys`, `DELETE /api/projects/:projectId/gateway-keys/:keyId`: see [Gateway keys](#gateway-keys) *(planned)* |
+| Provider key | `GET/PUT/DELETE /api/projects/:projectId/provider-key`: see [Provider key](#provider-key) |
+| Gateway keys | `GET/POST /api/projects/:projectId/gateway-keys`, `DELETE /api/projects/:projectId/gateway-keys/:keyId`: see [Gateway keys](#gateway-keys) |
 | Usage | `GET /api/projects/:projectId/usage?from&to&groupBy` *(draft)* |
 
 All routes except the auth routes need a session cookie (protected scope). Routes with `:projectId` also sit in the **project scope**: the user must own the project, else 404 (see [security.md](security.md#authorization)). Revoking a gateway key lives under its project (not `/api/keys/:id`), so the project scope covers it.
@@ -70,7 +70,7 @@ Project = { id: string, name: string, createdAt: string, updatedAt: string }  //
 
 ### Provider key
 
-**Status: Planned (GW-019).** The contract GW-019 builds to; details change only with a note here.
+**Status: Built (GW-019).**
 
 | Method | Path | Body | Success | Errors |
 |---|---|---|---|---|
@@ -82,9 +82,10 @@ Project = { id: string, name: string, createdAt: string, updatedAt: string }  //
 ProviderKey = { provider: "openai", lastFour: string, createdAt: string, updatedAt: string }
 ```
 
-- **One key per project.** A second PUT replaces it in place (same row, same `createdAt`).
-- **Never returned in full:** the API returns only the provider and the last 4 characters. It stores the key encrypted and never decrypts it.
-- **Body:** strict. `provider` is one of the supported providers (today only `openai`). `key` is trimmed; it must not be empty, must be at most 512 characters, and must not start with `gw_live_` (that is one of our own gateway keys, a common paste mistake; the message says so). There is **no provider-specific format check**: formats change and differ per provider. A real check against the provider on save is a separate task (GW-036).
+- **One key per project.** A second PUT replaces it in place (same row, same `createdAt`; the encrypted bytes and `lastFour` change).
+- **Never returned in full:** the API returns only the provider and the last 4 characters (`lastFour`, taken when the key is saved). It stores the key encrypted (AES-256-GCM, bound to the project ID) and never decrypts it.
+- **Body:** strict. `provider` is one of the supported providers (today only `openai`). `key` is trimmed (the trimmed value is what is stored), then must be 20 to 512 characters, must not contain control characters (a key travels in an HTTP header, which can't carry them), and must not start with `gw_live_` (that is one of our own gateway keys, a common paste mistake; the message says so). The minimum of 20 keeps `lastFour` from showing most of a short key. Spaces inside the key are accepted. There is **no provider-specific format check**: formats change and differ per provider. A real check against the provider on save is a separate task (GW-036).
+- **404** `NOT_FOUND`: "Project not found" (someone else's project or a missing one), or "No provider key set" (GET and DELETE on a project with no key).
 - Error bodies never contain the submitted key.
 
 ### Gateway keys

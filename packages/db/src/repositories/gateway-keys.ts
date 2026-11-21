@@ -1,5 +1,5 @@
 import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
-import type { Database, Queryable } from "../client.ts";
+import { toDrizzle, type Database, type Queryable } from "../client.ts";
 import { gatewayKeys } from "../schema/index.ts";
 import { lockForLimit } from "./limit-lock.ts";
 
@@ -31,14 +31,14 @@ export async function insertGatewayKey(
   db: Queryable,
   input: NewGatewayKey,
 ): Promise<GatewayKeySummary> {
-  const [row] = await db.insert(gatewayKeys).values(input).returning(summaryColumns);
+  const [row] = await toDrizzle(db).insert(gatewayKeys).values(input).returning(summaryColumns);
   if (!row) throw new Error("insert into gateway_keys returned no row");
   return row;
 }
 
 // Newest first; revoked keys are included. id breaks ties between equal timestamps.
 export function listGatewayKeys(db: Database, projectId: string): Promise<GatewayKeySummary[]> {
-  return db
+  return toDrizzle(db)
     .select(summaryColumns)
     .from(gatewayKeys)
     .where(eq(gatewayKeys.projectId, projectId))
@@ -46,7 +46,7 @@ export function listGatewayKeys(db: Database, projectId: string): Promise<Gatewa
 }
 
 export async function countActiveGatewayKeys(db: Queryable, projectId: string): Promise<number> {
-  const [row] = await db
+  const [row] = await toDrizzle(db)
     .select({ total: count() })
     .from(gatewayKeys)
     .where(and(eq(gatewayKeys.projectId, projectId), isNull(gatewayKeys.revokedAt)));
@@ -61,7 +61,7 @@ export async function revokeGatewayKey(
   projectId: string,
   keyId: string,
 ): Promise<boolean> {
-  const revoked = await db
+  const revoked = await toDrizzle(db)
     .update(gatewayKeys)
     .set({ revokedAt: sql`coalesce(${gatewayKeys.revokedAt}, now())` })
     .where(and(eq(gatewayKeys.id, keyId), eq(gatewayKeys.projectId, projectId)))
@@ -81,7 +81,7 @@ export function insertGatewayKeyWithinLimit(
   input: NewGatewayKey,
   limit: number,
 ): Promise<InsertGatewayKeyWithinLimitResult> {
-  return db.transaction(async (tx) => {
+  return toDrizzle(db).transaction(async (tx) => {
     await lockForLimit(tx, "gateway-keys", input.projectId);
     if ((await countActiveGatewayKeys(tx, input.projectId)) >= limit) {
       return { status: "limit_reached" };

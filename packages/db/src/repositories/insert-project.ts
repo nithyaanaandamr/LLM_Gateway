@@ -1,4 +1,4 @@
-import type { Queryable } from "../client.ts";
+import { toDrizzle, type Queryable } from "../client.ts";
 import { projects } from "../schema/index.ts";
 import { isUniqueViolation } from "../unique-violation.ts";
 import type { Project } from "./project-type.ts";
@@ -7,7 +7,10 @@ import type { Project } from "./project-type.ts";
 // Pass the logged-in user's ID, never a value from a request body.
 // see PITFALLS.md: Project access goes through one condition
 export async function insertProject(db: Queryable, userId: string, name: string): Promise<Project> {
-  const [project] = await db.insert(projects).values({ ownerId: userId, name }).returning();
+  const [project] = await toDrizzle(db)
+    .insert(projects)
+    .values({ ownerId: userId, name })
+    .returning();
   if (!project) throw new Error("insert into projects returned no row");
   return project;
 }

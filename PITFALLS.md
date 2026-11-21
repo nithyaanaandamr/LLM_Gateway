@@ -245,7 +245,7 @@ It stores `lastFour` when the key is saved and selects only summary columns (pro
 
 ## We don't check provider key formats
 
-Formats change and differ per provider, so a regex would eventually refuse a valid key. We only trim, bound the length to 20 to 512 characters (the minimum keeps `lastFour` from showing most of a short key) and refuse our own `gw_live_` keys (a common paste mistake). The real check is a test call to the provider on save (Backlog GW-036).
+Formats change and differ per provider, so a regex would eventually refuse a valid key. We only trim, bound the length to 20 to 512 characters (the minimum keeps `lastFour` from showing most of a short key) and refuse our own `gw_live_` keys (a common paste mistake). We also refuse control characters (NUL, tab, newline, ...): the key travels in an HTTP header, which can't carry them, so such a key could never work (NUL would also make Postgres fail with a 500). This is a text rule, not a format rule; spaces inside the key are accepted. The real check is a test call to the provider on save (Backlog GW-036).
 
 ## Node-only code in shared
 

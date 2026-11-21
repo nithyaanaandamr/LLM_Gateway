@@ -204,6 +204,22 @@ describe("provider key routes", () => {
         ["a missing provider", { key: secret }],
         ["an extra field", { provider: "openai", key: secret + "1", projectId: randomUUID() }],
         ["a lone surrogate", { provider: "openai", key: "k".repeat(30) + "\ud800" }],
+        [
+          "a NUL in the last four characters",
+          { provider: "openai", key: "k".repeat(30) + "ab\u0000d" },
+        ],
+        [
+          "a NUL in the middle",
+          { provider: "openai", key: "k".repeat(15) + "\u0000" + "k".repeat(15) },
+        ],
+        [
+          "a tab in the middle",
+          { provider: "openai", key: "k".repeat(15) + "\t" + "k".repeat(15) },
+        ],
+        [
+          "a newline in the middle",
+          { provider: "openai", key: "k".repeat(15) + "\n" + "k".repeat(15) },
+        ],
         ["a body that is not an object", [secret]],
       ];
 
@@ -266,6 +282,7 @@ describe("provider key routes", () => {
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual(stored.json());
       expect(res.body).not.toContain(key);
+      expect(res.headers["cache-control"]).toBe("no-store");
     });
 
     it("answers 404 'No provider key set' when none is stored", async () => {
@@ -305,6 +322,21 @@ describe("provider key routes", () => {
       expect(again.statusCode).toBe(404);
       expect(again.json<ErrorJson>().error.message).toBe("No provider key set");
       expect(await rowsOf(projectId)).toHaveLength(0);
+    });
+
+    it("answers 403 without an Origin and keeps the key", async () => {
+      const { cookie, projectId } = await setup();
+      await put(cookie, projectId, { provider: "openai", key: realKey() });
+
+      const res = await apiRequest(app, config, {
+        method: "DELETE",
+        url: urlFor(projectId),
+        cookie,
+        origin: null,
+      });
+
+      expect(res.statusCode).toBe(403);
+      expect(await rowsOf(projectId)).toHaveLength(1);
     });
 
     it("answers 404 for another user's project and keeps the key", async () => {

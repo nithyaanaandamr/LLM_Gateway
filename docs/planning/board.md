@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-018 | Projects API | 1 | Logged-in user can create, list, update, delete own projects; others' projects return 404; project scope (one access condition, 404 not 403); exact caps under a lock (ADR 0013) |
 
 ## Ready
 
@@ -63,3 +62,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-026 | Board bot rebuilds its branch instead of merging main | 0 | 2026-10-31 |
 | GW-014 | App schema and migrations | 1 | 2026-11-20 |
 | GW-017 | Dashboard auth (Better Auth) | 1 | 2026-11-21 |
+| GW-018 | Projects API | 1 | 2026-11-21 |

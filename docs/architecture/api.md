@@ -19,7 +19,7 @@ Errors: `401` bad key, `429` rate limit, `402`/`429` budget exceeded *(decide)*,
 | Auth | Better Auth, mounted by us: see [Auth and session routes](#auth-and-session-routes) |
 | Projects | `GET/POST /api/projects`, `GET/PATCH/DELETE /api/projects/:projectId`: see [Projects](#projects) |
 | Provider key | `GET/PUT/DELETE /api/projects/:projectId/provider-key`: see [Provider key](#provider-key) |
-| Gateway keys | `GET/POST /api/projects/:projectId/gateway-keys`, `DELETE /api/projects/:projectId/gateway-keys/:keyId`: see [Gateway keys](#gateway-keys) *(planned)* |
+| Gateway keys | `GET/POST /api/projects/:projectId/gateway-keys`, `DELETE /api/projects/:projectId/gateway-keys/:keyId`: see [Gateway keys](#gateway-keys) |
 | Usage | `GET /api/projects/:projectId/usage?from&to&groupBy` *(draft)* |
 
 All routes except the auth routes need a session cookie (protected scope). Routes with `:projectId` also sit in the **project scope**: the user must own the project, else 404 (see [security.md](security.md#authorization)). Revoking a gateway key lives under its project (not `/api/keys/:id`), so the project scope covers it.

@@ -13,7 +13,7 @@
     "typecheck": "tsc -b tsconfig.build.json && tsc --noEmit",
     "test": "tsc -b tsconfig.build.json && vitest run",
     "generate": "drizzle-kit generate",
-    "migrate": "tsc -b tsconfig.build.json && node --env-file-if-exists=../../.env dist/migrate-cli.js"
+    "migrate": "tsc -b tsconfig.build.json && node --enable-source-maps --env-file-if-exists=../../.env dist/migrate-cli.js"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",

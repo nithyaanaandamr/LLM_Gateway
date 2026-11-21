@@ -78,11 +78,11 @@ Packages:
 Apps add:
 
 ```json
-"dev": "tsc -b tsconfig.build.json && concurrently --kill-others --names tsc,app \"tsc -b -w --preserveWatchOutput tsconfig.build.json\" \"node --watch --env-file-if-exists=../../.env dist/main.js\"",
-"start": "node dist/main.js"
+"dev": "tsc -b tsconfig.build.json && concurrently --kill-others --names tsc,app \"tsc -b -w --preserveWatchOutput tsconfig.build.json\" \"node --enable-source-maps --watch --env-file-if-exists=../../.env dist/main.js\"",
+"start": "node --enable-source-maps dist/main.js"
 ```
 
-`start` never builds and never reads `.env`.
+`start` never builds and never reads `.env`. `--enable-source-maps` makes stack traces point at `.ts` lines instead of `dist/*.js`.
 
 ### `exports`
 

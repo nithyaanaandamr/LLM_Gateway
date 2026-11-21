@@ -11,6 +11,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
+| GW-023 | Source maps in `start` and `dev` | 1 | Apps run Node with `--enable-source-maps`; a 5xx stack trace in the logs points at `.ts` lines; ADR 0012 recipe updated |
 | GW-025 | Fix board-bot PITFALLS reference | 0 | `tools/board-bot/tsconfig.json` comment cites the real heading "Node runs TypeScript directly"; every other `PITFALLS.md: <heading>` pointer names a real heading |
 
 ## Ready
@@ -19,7 +20,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 |---|---|---|---|
 | GW-041 | Code structure spec | 1.5 | `docs/architecture/code-structure.md` names each layer (HTTP routes and hooks, services, repositories, schema, shared packages, test helpers), what each may import, and how layers talk (calls, errors, dependencies passed in); says when a route may call a repository without a service; covers every app, package and tool, including the planned gateway and worker; an ADR records the layering and the lint tool; owner approved |
 | GW-042 | Enforce code boundaries in ESLint | 1.5 | Every import rule in `code-structure.md` (GW-041) is checked by `pnpm lint` in CI, including: apps never import other apps; `testing/` helpers and `@gw/db/testing` only in tests; no Drizzle in app runtime code; `shared`'s main entry stays browser-safe; no import cycles. One deliberately bad import per rule fails lint (tested); existing code passes or is fixed; Prettier can't reformat Markdown from any folder; CLAUDE.md points to the doc |
-| GW-023 | Source maps in `start` and `dev` | 1 | Apps run Node with `--enable-source-maps`; a 5xx stack trace in the logs points at `.ts` lines; ADR 0012 recipe updated |
 | GW-024 | Move error shape types to `shared` | 1 | `ErrorBody` and `ErrorCode` (types only) live in `packages/shared`; admin-api imports them; usable by the dashboard |
 
 ## Backlog

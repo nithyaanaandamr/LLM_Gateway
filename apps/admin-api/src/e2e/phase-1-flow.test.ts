@@ -8,13 +8,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { Config } from "../config.ts";
 import { COOKIE_WITH_VALUE, forms, request, sessionCookieOf } from "../testing/fetch-requests.ts";
-import {
-  killAllServers,
-  logLines,
-  startListening,
-  stopServer,
-  type ListeningServer,
-} from "../testing/server-process.ts";
+import { killAllServers, logLines, startListening, stopServer } from "../testing/server-process.ts";
 import { testConfig } from "../testing/test-config.ts";
 import { testEnv } from "../testing/test-env.ts";
 
@@ -37,19 +31,8 @@ describe("Phase 1 end to end (real process, real HTTP)", { timeout: 60_000 }, ()
   afterAll(() => connection.close());
   afterEach(killAllServers);
 
-  const send = (
-    server: ListeningServer,
-    path: string,
-    method: string,
-    cookie?: string,
-    body?: unknown,
-  ) =>
-    request(`${server.url}${path}`, {
-      method,
-      origin: env["DASHBOARD_ORIGIN"] ?? "",
-      body,
-      cookie,
-    });
+  const send = (url: string, method: string, body?: unknown, cookie?: string) =>
+    request(url, { method, origin: env["DASHBOARD_ORIGIN"] ?? "", body, cookie });
 
   // The gateway's read path: only the key in hand, straight from the database
   async function gatewayLookup(key: string) {
@@ -72,7 +55,7 @@ describe("Phase 1 end to end (real process, real HTTP)", { timeout: 60_000 }, ()
     const server = await startListening(MAIN, env);
 
     // 1. Sign up, then the session works
-    const signUp = await send(server, "/api/auth/sign-up/email", "POST", undefined, {
+    const signUp = await send(`${server.url}/api/auth/sign-up/email`, "POST", {
       name: "E2E User",
       email,
       password: PASSWORD,
@@ -80,24 +63,26 @@ describe("Phase 1 end to end (real process, real HTTP)", { timeout: 60_000 }, ()
     expect(signUp.status).toBe(200);
     const { token } = (await signUp.json()) as { token: string };
     const cookie = sessionCookieOf(signUp);
-    expect((await send(server, "/api/me", "GET", cookie)).status).toBe(200);
+    expect((await send(`${server.url}/api/me`, "GET", undefined, cookie)).status).toBe(200);
 
     // 2. Project
-    const created = await send(server, "/api/projects", "POST", cookie, { name: "E2E" });
+    const created = await send(`${server.url}/api/projects`, "POST", { name: "E2E" }, cookie);
     expect(created.status).toBe(201);
     const { id: projectId } = (await created.json()) as { id: string };
-    const projectUrl = `/api/projects/${projectId}`;
+    const projectUrl = `${server.url}/api/projects/${projectId}`;
 
     // 3. Provider key
-    const stored = await send(server, `${projectUrl}/provider-key`, "PUT", cookie, {
-      provider: "openai",
-      key: canary,
-    });
+    const stored = await send(
+      `${projectUrl}/provider-key`,
+      "PUT",
+      { provider: "openai", key: canary },
+      cookie,
+    );
     expect(stored.status).toBe(200);
     expect(await stored.json()).toMatchObject({ lastFour: canary.slice(-4) });
 
     // 4. Gateway key
-    const issued = await send(server, `${projectUrl}/gateway-keys`, "POST", cookie, { name: "ci" });
+    const issued = await send(`${projectUrl}/gateway-keys`, "POST", { name: "ci" }, cookie);
     expect(issued.status).toBe(201);
     const { key, gatewayKey } = (await issued.json()) as {
       key: string;
@@ -107,14 +92,14 @@ describe("Phase 1 end to end (real process, real HTTP)", { timeout: 60_000 }, ()
     expect(key).toMatch(/^gw_live_[0-9a-f]{64}$/);
 
     // 5. Reads show the prefix and last four only
-    const listed = await send(server, `${projectUrl}/gateway-keys`, "GET", cookie);
+    const listed = await send(`${projectUrl}/gateway-keys`, "GET", undefined, cookie);
     const listedText = await listed.text();
     expect(listed.status).toBe(200);
     expect(JSON.parse(listedText)).toMatchObject({
       gatewayKeys: [{ id: gatewayKey.id, keyPrefix: key.slice(0, 12) }],
     });
     expect(listedText).not.toContain(hexPart);
-    const providerRead = await send(server, `${projectUrl}/provider-key`, "GET", cookie);
+    const providerRead = await send(`${projectUrl}/provider-key`, "GET", undefined, cookie);
     const providerText = await providerRead.text();
     expect(providerRead.status).toBe(200);
     expect(JSON.parse(providerText)).toMatchObject({ lastFour: canary.slice(-4) });
@@ -134,16 +119,16 @@ describe("Phase 1 end to end (real process, real HTTP)", { timeout: 60_000 }, ()
 
     // 7. Revoke
     const revoked = await send(
-      server,
       `${projectUrl}/gateway-keys/${gatewayKey.id}`,
       "DELETE",
+      undefined,
       cookie,
     );
     expect(revoked.status).toBe(204);
     expect((await gatewayLookup(key)).keyRow?.revokedAt).toBeInstanceOf(Date);
 
     // 8. Delete the project: both key rows go
-    const removed = await send(server, projectUrl, "DELETE", cookie);
+    const removed = await send(projectUrl, "DELETE", undefined, cookie);
     expect(removed.status).toBe(204);
     const after = await gatewayLookup(key);
     expect(after.keyRow).toBeUndefined();

@@ -11,8 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-019 | Provider key API | 1 | Set/replace/remove one provider key per project; stored encrypted; never returned in full |
-| GW-020 | Gateway key API | 1 | Issue (shown once), list (prefix only), revoke; only hash stored |
 
 ## Ready
 
@@ -63,3 +61,5 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-014 | App schema and migrations | 1 | 2026-11-20 |
 | GW-017 | Dashboard auth (Better Auth) | 1 | 2026-11-21 |
 | GW-018 | Projects API | 1 | 2026-11-21 |
+| GW-020 | Gateway key API | 1 | 2026-11-21 |
+| GW-019 | Provider key API | 1 | 2026-11-21 |

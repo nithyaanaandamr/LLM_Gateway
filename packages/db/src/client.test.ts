@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
 import { createDb, type DbConnection } from "./client.ts";
-import { createTestDatabase } from "./testing/index.ts";
+import { createTestDatabase, toDrizzle } from "./testing/index.ts";
 
 describe("createDb", () => {
   let connection: DbConnection;
@@ -15,9 +15,9 @@ describe("createDb", () => {
   });
 
   it("connects and runs a query, then rejects after close", async () => {
-    const result = await connection.db.execute(sql`select 1 as one`);
+    const result = await toDrizzle(connection.db).execute(sql`select 1 as one`);
     expect(result.rows[0]).toEqual({ one: 1 });
     await connection.close();
-    await expect(connection.db.execute(sql`select 1`)).rejects.toThrow();
+    await expect(toDrizzle(connection.db).execute(sql`select 1`)).rejects.toThrow();
   });
 });

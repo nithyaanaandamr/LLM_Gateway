@@ -2,12 +2,12 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type DbConnection } from "../client.ts";
-import { createTestDatabase } from "../testing/index.ts";
+import { createTestDatabase, toDrizzle } from "../testing/index.ts";
 import { gatewayKeys, PROVIDERS, projects, providerKeys } from "./app.ts";
 import { users } from "./auth.ts";
 
 let connection: DbConnection;
-const db = () => connection.db;
+const db = () => toDrizzle(connection.db);
 
 beforeAll(async () => {
   connection = createDb(await createTestDatabase());

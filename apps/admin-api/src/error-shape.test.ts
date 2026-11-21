@@ -102,7 +102,9 @@ describe("error shape: more cases", () => {
     expect(errorOf(res)).toMatchObject({ code: "BAD_REQUEST", message: "URL too long" });
     expect(errorOf(res).requestId).toMatch(UUID);
     expect(res.body.length).toBeLessThan(300);
-    expect(res.body).not.toContain("aaaa");
+    // 13 in a row: the random requestId (a UUID) can't contain that many
+    // see PITFALLS.md: Negative text checks and random IDs
+    expect(res.body).not.toContain("a".repeat(13));
     expect(res.headers["cache-control"]).toBe("no-store");
   });
 

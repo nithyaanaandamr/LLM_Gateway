@@ -471,3 +471,7 @@ Prettier looks for `.prettierignore` only in the folder it runs in. Run from a p
 ## Source maps need the flag and the .map files
 
 Stack traces show `.ts` lines only if Node runs with `--enable-source-maps` (in `start`, the node part of `dev`, and `migrate`) and the `.js.map` files sit next to the built `.js`. Lose either and traces silently point at `dist/*.js`. `apps/admin-api/src/source-maps.test.ts` fails if either goes missing. Gotcha: `tsc -b` skips files it thinks are up to date, so after deleting only `.map` files, delete `dist/` to get them back.
+
+## Negative text checks and random IDs
+
+A test that asserts a response body does **not** contain some text fails by chance if the body also holds a random value that can contain it. Every error body has a random `requestId` (a UUID: hex digits and hyphens, at most 12 characters between hyphens). `not.toContain("aaaa")` failed about 1 run in 3,300; checking for 13 `a`s in a row can never match a UUID. Pick negative texts a random ID can't contain: longer than 12 characters, or with non-hex letters.

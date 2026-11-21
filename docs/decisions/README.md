@@ -20,3 +20,4 @@ Statuses: `Open` (researching) → `Proposed` (recommendation, awaiting decision
 | [0011](0011-project-ownership.md) | Project ownership: single owner now, teams later | Accepted |
 | [0012](0012-packages-compile-to-dist.md) | Packages and apps compile to dist | Accepted |
 | [0013](0013-atomic-limits.md) | Every limit is one atomic check-and-count | Accepted |
+| [0014](0014-code-layers-and-boundary-lint.md) | Code layers and boundary lint | Accepted |

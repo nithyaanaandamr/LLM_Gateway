@@ -14,6 +14,7 @@
   "exclude": ["src/**/*.test.ts", "src/**/*.fixture.ts", "src/testing"],
   "references": [
     { "path": "../../packages/db/tsconfig.build.json" },
-    { "path": "../../packages/auth/tsconfig.build.json" }
+    { "path": "../../packages/auth/tsconfig.build.json" },
+    { "path": "../../packages/shared/tsconfig.build.json" }
   ]
 }

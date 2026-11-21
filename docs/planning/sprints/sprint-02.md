@@ -1,6 +1,6 @@
 # Sprint 02
 
-- **Dates:** 2026-10-23 to TBD
+- **Dates:** 2026-10-23 to 2026-11-21
 - **Goal:** Phase 1 data and admin core: a user can sign up, add a provider key and get a gateway key (via API)
 
 ## Scope
@@ -17,6 +17,7 @@
 | GW-019 | Provider key API | Done |
 | GW-020 | Gateway key API | Done |
 | GW-021 | Phase 1 E2E test | Done |
+| GW-040 | Close Sprint 02, start Sprint 03 | Open |
 
 Status is `Open` or `Done`. The board bot sets `Done` after merge.
 
@@ -41,7 +42,7 @@ Status is `Open` or `Done`. The board bot sets `Done` after merge.
 | Login rate limit: built-in, in memory, all environments | Decided | [PITFALLS.md](../../../PITFALLS.md): Auth rate limit needs the real client IP |
 | CSRF on our cookie routes: Origin check on unsafe methods | Decided | [PITFALLS.md](../../../PITFALLS.md): Better Auth's origin check covers only its own routes |
 | DASHBOARD_ORIGIN must be https unless local | Decided | [admin-api README](../../../apps/admin-api/README.md#config): GW-017 |
-| Session tokens stored in plain text | Drafted | [PITFALLS.md](../../../PITFALLS.md): Session tokens in plain text |
+| Session tokens stored in plain text: accepted for v1, protected before first deployment | Decided | [board.md](../board.md): GW-043 |
 | Database queries live in `packages/db/src/repositories/`; admin-api never imports Drizzle at runtime | Decided | [packages/db README](../../../packages/db/README.md#repositories): GW-018 (decision 1A) |
 | Gateway key revoke path: `DELETE /api/projects/:projectId/gateway-keys/:keyId`, inside the project scope | Decided | [api.md](../../architecture/api.md#gateway-keys): GW-020 (decision 2A) |
 | Limits are exact: counted and inserted under a Postgres advisory lock (100 projects per user, 20 active gateway keys per project) | Decided | [PITFALLS.md](../../../PITFALLS.md): Limits are counted under a lock (decision 3, revised) |
@@ -63,5 +64,17 @@ States and rules: [README.md](../README.md#open-topics).
 ## Retro
 
 - **Went well:**
+  - Phase 1's goal is met and proven by a test: a real server process runs sign up → project → provider key → gateway key, then the gateway's read path (GW-021).
+  - Safety checks cover new code automatically: the route inventory and project ownership tests check every route, and real-process tests prove secrets stay out of the logs.
+  - Owner decisions were written down (brief, Open topics, ADR 0013) before code, so work paused across sessions resumed cleanly.
+  - QA's deliberate breaks (mutation checks) found real gaps before merge, e.g. a NUL in a provider key gave a 500 (GW-019).
 - **To improve:**
+  - A QA round with no time limit took about 95 minutes; the owner thought work was stuck.
+  - The first GW-017 brief was kept in a scratchpad and was lost.
+  - Several owner decisions came after the GW-018–021 brief was written (exact caps, provider key rule, minimum length). It grew past 750 lines, and later "build notes" overrode earlier sections.
+  - A Junior ran Prettier from a package folder, where the root `.prettierignore` doesn't apply, and reformatted unrelated README tables (caught before QA).
 - **Action:**
+  - QA gets a 15–30 minute budget and a short checklist; start a fresh agent once its context grows large.
+  - Briefs are kept in a durable folder, never a scratchpad.
+  - One brief per task, written after the owner's decisions; a later decision edits the section it changes instead of adding an override block.
+  - Run Prettier only from the repo root (PITFALLS.md: Prettier reads .prettierignore from the current folder); GW-042 makes Markdown safe from any folder.

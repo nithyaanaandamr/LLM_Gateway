@@ -371,7 +371,7 @@ It guards `/api/auth/*`. Our protected routes run `requireTrustedOrigin`, which 
 
 ## Session tokens in plain text
 
-`auth.sessions.token` is stored as is, not hashed (gateway keys are hashed). Anyone with read access to the database can use live sessions until they expire (7 days). Accepted for v1; revisit before going public.
+`auth.sessions.token` is stored as is, not hashed (gateway keys are hashed). Anyone with read access to the database can use live sessions until they expire (7 days). Accepted for v1; revisit before going public. Backlog GW-043 protects them, required before first deployment.
 
 ## Database errors carry query params
 
@@ -463,3 +463,7 @@ The project scope must stop a route that has no `:projectId`. Throwing from an `
 ## E2E reads the database like the gateway
 
 `apps/admin-api/src/e2e/phase-1-flow.test.ts` checks the hand-off to Phase 2: with only the gateway key, find its row by hash, then decrypt the project's provider key. It uses a direct Drizzle query for the hash lookup because the gateway's lookup function doesn't exist yet. When Phase 2 adds `findGatewayKeyByHash`, switch the test to it, so the test follows the code the gateway really runs.
+
+## Prettier reads .prettierignore from the current folder
+
+Prettier looks for `.prettierignore` only in the folder it runs in. Run from a package folder (`cd apps/admin-api && prettier --write README.md`), it doesn't see the root file and reformats hand-formatted Markdown (see Prettier skips Markdown). Run `pnpm format` from the repo root. Found in GW-021: a README's tables were rewritten.

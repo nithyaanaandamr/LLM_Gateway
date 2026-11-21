@@ -1,5 +1,6 @@
 import type { Database } from "@gw/db";
 import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";
+import { gatewayKeyRoutes } from "../gateway-keys/gateway-key-routes.ts";
 import { projectItemRoutes } from "./project-item-routes.ts";
 import { projectScope } from "./project-scope.ts";
 
@@ -14,6 +15,7 @@ export const projectScopedApi: FastifyPluginCallbackZod<ProjectScopedApiOptions>
   done,
 ) => {
   projectScope(app, { db: options.db });
+  void app.register(gatewayKeyRoutes, { db: options.db });
   void app.register(projectItemRoutes, { db: options.db });
   done();
 };

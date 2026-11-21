@@ -46,10 +46,10 @@ export async function startListening(
   return { ...server, url: `http://127.0.0.1:${port}` };
 }
 
-// SIGTERM, then wait for the exit
-export async function stopServer(server: ServerProcess): Promise<void> {
+// SIGTERM, then wait for the exit; returns the exit code
+export async function stopServer(server: ServerProcess): Promise<number | null> {
   server.child.kill("SIGTERM");
-  await server.exited;
+  return server.exited;
 }
 
 // For afterEach: kill every process this file started

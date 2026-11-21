@@ -1,5 +1,9 @@
 # @gw/db
 
+- **Layer:** Package (schema, client, repositories)
+- **May import:** `drizzle-orm`, `pg`, `@gw/shared` (nothing yet)
+- **Does not:** import `@gw/auth`, apps or HTTP frameworks
+
 Drizzle schema, migrations and the database client.
 
 - App data: users, projects, provider keys, gateway keys, model pricing

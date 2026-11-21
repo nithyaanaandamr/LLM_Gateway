@@ -1,5 +1,9 @@
 # @gw/gateway
 
+- **Layer:** App (hot path, planned)
+- **May import:** `@gw/db` (read functions), `@gw/shared` (and `/crypto`), the Redis/queue client
+- **Does not:** import `@gw/auth`, other apps or `drizzle-orm`
+
 The hot path. Every millisecond here is added to every user request.
 
 **Does:**

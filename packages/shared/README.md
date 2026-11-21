@@ -1,5 +1,9 @@
 # @gw/shared
 
+- **Layer:** Package (shared code; main entry is browser-safe)
+- **May import:** nothing else in the workspace; the main entry also avoids `node:*` (only `./crypto` may use `node:crypto`)
+- **Does not:** import any `@gw/*` package, or `node:*` from the main entry
+
 Code used by more than one app.
 
 - Zod schemas for API contracts (types are inferred from them)

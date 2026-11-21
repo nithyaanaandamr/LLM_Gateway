@@ -1,5 +1,9 @@
 # @gw/worker
 
+- **Layer:** App (cold path, planned)
+- **May import:** `@gw/db`, `@gw/shared`, the queue client
+- **Does not:** import other apps, `@gw/auth` or `fastify`
+
 The cold path. Consumes BullMQ jobs from Redis.
 
 **Jobs:**

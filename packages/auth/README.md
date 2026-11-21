@@ -1,5 +1,9 @@
 # @gw/auth
 
+- **Layer:** Package (Better Auth config, no HTTP)
+- **May import:** `@gw/db`, `better-auth`, `drizzle-orm`
+- **Does not:** import apps or `fastify`
+
 Better Auth config (ADR 0005). It has no HTTP framework code; `apps/admin-api` mounts it.
 
 - `tableOptions(db)`: options that shape the `auth` tables in `packages/db`. The Better Auth CLI reads only these, so `pnpm auth:generate` needs no secret.

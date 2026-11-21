@@ -1,5 +1,5 @@
 import { accounts, createDb, type DbConnection, users } from "@gw/db";
-import { createTestDatabase } from "@gw/db/testing";
+import { createTestDatabase, toDrizzle } from "@gw/db/testing";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CLIENT_IP_HEADER } from "./client-ip-header.ts";
@@ -101,7 +101,7 @@ describe("createAuth", () => {
     );
 
     expect(user.id).toMatch(UUID_PATTERN);
-    const rows = await connection.db.select().from(users).where(eq(users.id, user.id));
+    const rows = await toDrizzle(connection.db).select().from(users).where(eq(users.id, user.id));
     expect(rows).toHaveLength(1);
     expect(rows[0]?.email).toBe("uuid@example.com");
   });
@@ -110,11 +110,11 @@ describe("createAuth", () => {
     const response = await signUp(auth, HTTP_BASE_URL, "hash@example.com");
     expect(response.status).toBe(200);
 
-    const [user] = await connection.db
+    const [user] = await toDrizzle(connection.db)
       .select()
       .from(users)
       .where(eq(users.email, "hash@example.com"));
-    const rows = await connection.db
+    const rows = await toDrizzle(connection.db)
       .select()
       .from(accounts)
       .where(eq(accounts.userId, user?.id ?? ""));

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.js",
+    "./drizzle": "./dist/drizzle.js",
     "./testing": "./dist/testing/index.js"
   },
   "scripts": {

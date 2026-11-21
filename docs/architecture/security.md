@@ -11,6 +11,8 @@
 - Format: `gw_live_<random>` (32 random bytes).
 - Shown **once** at creation. Only the SHA-256 hash is stored.
 - Revocable. Revocation must also clear the Redis key cache.
+- Revoke is `DELETE /api/projects/:projectId/gateway-keys/:keyId`, inside the project scope. It finds the key through its project (`id` and `project_id`), so a key ID under another project is a 404. It keeps the row, sets `revoked_at`, and is idempotent (204 again, first time kept).
+- The list shows the 12-character prefix only. The full key is in the one 201 response (`no-store`), never stored, logged or returned again.
 
 ## Two kinds of auth
 

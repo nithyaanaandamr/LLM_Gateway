@@ -25,6 +25,7 @@ Drizzle schema, migrations and the database client.
 
 Plain functions in `src/repositories/` that take `db` and load or store rows. They never encrypt (services in the apps combine the two). Apps never import `drizzle-orm` at runtime, so every query goes through these.
 
+- `gateway-keys.ts`: `insertGatewayKeyWithinLimit` (exact cap, per project), `listGatewayKeys` (newest first), `countActiveGatewayKeys`, `revokeGatewayKey` (matches `id` and `project_id`, idempotent); takes a hash and prefix, never a key
 - `projects.ts`: `listAccessibleProjects` (sorted by bytes, whatever the collation), `findAccessibleProject`, `countAccessibleProjects`, `insertProjectWithinLimit`, `renameProject`, `deleteProject`; re-exports `insertProject` and `isProjectNameTaken` from `insert-project.ts`
 
 **Project access.** `project-access.ts` exports `accessibleProjects(userId)`, a SQL condition (today `owner_id = userId`). It is the only code that reads `owner_id` to decide access ([ADR 0011](../../docs/decisions/0011-project-ownership.md)); a test pins that only `project-access.ts` and `insert-project.ts` (the one writer) name it, in this package and in admin-api. It is not exported from the package. Use `findAccessibleProject` or `listAccessibleProjects`: one query checks access and loads the row, and "someone else's" and "missing" both come back as `undefined`. `renameProject` and `deleteProject` take the user ID and apply the same condition, so they are safe even without a prior `findAccessibleProject`.

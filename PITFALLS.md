@@ -247,6 +247,18 @@ Crypto uses `node:crypto`, which browsers don't have. It is exported only via `@
 
 The attacker picks the key but can't steer its SHA-256 hash, so timing the DB lookup teaches them nothing about real keys. Constant-time compare (`timingSafeEqual`) matters only when comparing a secret directly to attacker input in JS.
 
+## A gateway key is shown once
+
+Only the 201 body of `POST /api/projects/:projectId/gateway-keys` holds the key (`Cache-Control: no-store`, and no code path logs it: Fastify doesn't log bodies). The database keeps the SHA-256 hash and the 12-character prefix, nothing else. A lost key is replaced by issuing a new one and revoking the old; it can never be recovered. The key is made in the service (`issue-gateway-key.ts`) before the transaction, so the repository never sees it, only its hash. Tests check the stored row, the list response and a real process's stdout and stderr for the key's 64-hex part.
+
+## Find child rows through their project
+
+The project scope proves the user may access the project in the URL. A key ID in the URL is separate input: revoke matches `id` **and** `project_id`. With `id` alone, a user could revoke any key in the system by putting its ID under their own project. The same rule holds for every future child row (usage, members): look it up through `getProject(request).id`, never by its own ID. The IDOR tests cover both another project of mine and another user's key.
+
+## Revoke has no cache to clear yet
+
+The gateway's Redis key cache arrives in Phase 2. Until then revoke only sets `revoked_at`, and project delete relies on the foreign-key cascade. When the cache exists, the revoke handler and the project delete handler are the single places that must also clear it, or a revoked key keeps working until its cache entry expires (Backlog GW-033; see Cascades don't reach Redis). Revoke also bumps `updated_at` when repeated (Drizzle sets it on every update); `revoked_at` keeps the first time, and `updated_at` is not returned by the API.
+
 ## Empty env vars count as missing
 
 `.env` lines like `ADMIN_API_PORT=` give `""`, and `Number("")` is `0` (any free port). Config drops empty values before validating, so they report "is required".

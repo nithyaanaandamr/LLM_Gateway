@@ -12,7 +12,12 @@ The rules are simple: each file has one job, and it may only use the layers belo
 - **Entry point (`exports`):** the paths a package lets others import (`@gw/db`, `@gw/db/testing`). Node and TypeScript refuse any other path.
 - **Runtime code:** code that runs in production: `src/` minus `*.test.ts`, `*.fixture.ts` and `src/testing/`.
 - **Repository:** a plain function in `@gw/db` that runs one query or one transaction.
-- **Service:** a function in an app that combines a repository with something else (for example crypto).
+- **Service:** a function in an app that uses another package besides `@gw/db`, or needs 2+ repository calls (for example crypto plus a store).
+- **Scope:** a Fastify plugin scope: a group of routes that share hooks. A hook added in a scope covers only the routes registered inside it.
+- **Plugin options:** the object passed as `app.register(plugin, options)`; this is how `db`, `auth` and `masterKey` reach routes.
+- **Result union:** a return type that lists every expected outcome, such as `{ status: "limit_reached" }` or a created row.
+- **LogStore:** the planned `@gw/db` module that is the only way to read and write request logs (ADR 0007).
+- **Hot path:** the code that runs on every gateway request; any slowness here reaches every user.
 
 ## 2. Repo map
 
@@ -69,12 +74,12 @@ No app imports another app, and no package imports an app. `tsc -b` refuses circ
 `admin-api` is the model; the gateway and worker reuse it (the worker has job handlers instead of HTTP).
 
 ```
- Startup        main.ts, app.ts, config.ts      reads env once, builds db/auth/keys
+ Startup        main.ts, app.ts, config.ts      reads env once, builds db/auth, parses keys
     │ passes dependencies as plugin options
     ▼
  HTTP           scopes → hooks → routes (+ schemas, helpers, errors)
     │ function calls                 (worker: job handlers instead of HTTP)
-    ├──────────► Service  <verb>-<noun>.ts   combines repository + another package
+    ├──────────► Service  <verb>-<noun>.ts   another package, or 2+ repo calls
     ▼                │
  Repository     @gw/db functions (never Drizzle in the app)
     ▼
@@ -86,7 +91,7 @@ No app imports another app, and no package imports an app. `tsc -b` refuses circ
 | Startup | read config once, build dependencies, register plugins, shut down | everything in its app; `@gw/*` main entries | testing helpers | passes `db`, `auth`, `masterKey` as plugin options (app.ts:31-42) |
 | HTTP: scopes, hooks | access checks for a group of routes | HTTP helpers, repositories, `@gw/auth` | services of other features | throw `AppError`; set `request.project` / `request.auth` |
 | HTTP: routes, schemas | parse input (Zod), call a repository or service, shape the response | own feature's schemas and service, HTTP helpers, repositories, `@gw/shared` | `drizzle-orm`, tables, `process.env`, another app | call functions; throw `AppError` with a safe message |
-| Service | logic that spans packages (crypto + store) | repositories, `@gw/shared` (+crypto), own feature's schemas file, `errors.ts` | `fastify`, request/reply objects, `drizzle-orm` | plain arguments in, plain value out; may throw `AppError` |
+| Service | logic that uses another package besides `@gw/db`, or needs 2+ repository calls | repositories, `@gw/shared` (+crypto), own feature's schemas file, `errors.ts` | `fastify`, request/reply objects, `drizzle-orm` | plain arguments in, plain value out; may throw `AppError` |
 | Repository (`@gw/db`) | one query or one transaction | schema, `drizzle-orm`, `pg` | apps, crypto | returns rows, `undefined`/`false`, or a result union; throws on unexpected DB errors |
 | Schema (`@gw/db`) | table definitions | `drizzle-orm` | repositories, apps | n/a |
 
@@ -97,7 +102,7 @@ How `admin-api` files map to layers:
 | `main.ts`, `app.ts`, `config.ts`, `logger.ts`, `shutdown.ts` | Startup |
 | `protected-api.ts`, `projects/project-scoped-api.ts`, `projects/project-scope.ts` | HTTP: scopes |
 | `auth/require-session.ts`, `auth/require-trusted-origin.ts`, `projects/require-project.ts` | HTTP: hooks |
-| `*/*-routes.ts`, `routes/health.ts`, `routes/me.ts` | HTTP: routes |
+| `*/*-routes.ts` (except `auth/auth-routes.ts`, listed under the bridge), `routes/health.ts`, `routes/me.ts` | HTTP: routes |
 | `*/*-schemas.ts` | HTTP: schemas (Zod shapes, `toXResponse` mappers, limits) |
 | `auth/get-auth-user.ts`, `projects/get-project.ts`, `projects/project-not-found.ts`, `projects/name-conflict.ts` | HTTP: helpers |
 | `errors.ts`, `error-handler.ts`, `log-error.ts` | HTTP: errors |
@@ -113,13 +118,13 @@ How `admin-api` files map to layers:
 
 ## 5. Dependencies and config
 
-- Dependencies are passed in, never imported as singletons. `app.ts:31-42` builds `db`, `auth` and `masterKey` once and passes them as plugin options; each route plugin declares what it needs (`GatewayKeyRoutesOptions { db }`, gateway-key-routes.ts:14-16).
+- Dependencies are passed in, never imported as singletons. `app.ts:31-42` builds `db` and `auth` once; `config.ts` parses `masterKey` and `app.ts` passes all three on as plugin options; each route plugin declares what it needs (`GatewayKeyRoutesOptions { db }`, gateway-key-routes.ts:14-16).
 - Config is read once: `loadConfig(process.env)` runs only in `main.ts:8` (and in the test fixture). No other admin-api runtime file reads `process.env`.
 - Repositories never encrypt; services do (packages/db/README.md, store-provider-key.ts:20-26).
 
 ## 6. Route, service, repository
 
-> A route may call a `@gw/db` repository function directly. Add a service file (`<verb>-<noun>.ts` in the feature folder) when the work (1) uses another package besides `@gw/db` (crypto, Redis, the queue), or (2) needs more than one repository call. Turning one repository result or error into an `AppError` (404, 409) stays in the route file. A service never touches the request or reply.
+> A route may call a `@gw/db` repository function directly. Add a service file (`<verb>-<noun>.ts` in the feature folder) when the work uses another package besides `@gw/db`, or needs 2+ repository calls (crypto, Redis, the queue). Turning one repository result or error into an `AppError` (404, 409) stays in the route file. A service never touches the request or reply.
 
 Check against today's code:
 
@@ -141,7 +146,7 @@ Check against today's code:
 
 - Tests sit next to the file they test (`x.test.ts`). Tests that cover the whole app (route inventory, ownership) sit at `src/` root; end-to-end tests in `src/e2e/`.
 - Tests may import anything in their app, `@gw/db` tables, `drizzle-orm`, testing helpers and `tools/fake-provider`. They never import another app's source. Tests never call real providers.
-- Test helpers are `apps/<app>/src/testing/*.ts` and `@gw/db/testing`. Only tests import them. Each `admin-api` helper starts with a "Test-only" comment, and none is imported by runtime code (checked by grep).
+- Test helpers are `apps/<app>/src/testing/*.ts` and `@gw/db/testing`. Only tests and test config (`vitest.global-setup.ts` in admin-api and auth, which import `@gw/db/testing`) import them. Each `admin-api` helper starts with a "Test-only" comment, and none is imported by runtime code (checked by grep).
 - `tsconfig.build.json` excludes `src/testing`, but TypeScript still compiles any file that runtime code imports, so the exclude does not block a bad import. Lint does (GW-042).
 - Guardrail tests that already exist: `route-inventory.test.ts` (every route needs a session unless allow-listed), `project-ownership.test.ts`, and `owner-access-rule.test.ts` (only two files name `owner_id`).
 
@@ -155,40 +160,59 @@ Check against today's code:
 
 | New code | Goes in | Why |
 |---|---|---|
-| A new admin route | `apps/admin-api/src/<feature>/<feature>-routes.ts`, registered in the right scope | scopes give login and project checks for free |
-| A new query | a function in `packages/db/src/repositories/<table>.ts`, exported from `@gw/db` | apps never build queries |
+| A new admin route | `apps/admin-api/src/<feature>/<feature>-routes.ts`, registered in the right scope: needs only a session, in `protected-api.ts`; needs a project the user can access (path has `:projectId`), in `projects/project-scoped-api.ts`; public, in `app.ts` like `routes/health.ts` | scopes give login and project checks for free |
+| A new query | a function in `packages/db/src/repositories/<table>.ts`; a new repository file also needs an `export *` line in `packages/db/src/index.ts` | apps never build queries |
 | A query that must check a cap | repository function with lock, count and insert; returns a result union (ADR 0013) | exact limits |
-| Logic mixing DB and crypto (or 2+ repository calls) | a service file in the feature folder | section 6 |
+| Logic that uses another package besides `@gw/db`, or needs 2+ repository calls | a service file in the feature folder | section 6 |
 | A new crypto helper | `packages/shared/src/crypto/`, re-exported from `crypto/index.ts` | Node-only subpath (see PITFALLS.md: Node-only code in shared) |
 | A type the dashboard and admin-api both use (for example `ErrorBody`) | `packages/shared/src/` main entry, types or browser-safe values only | the dashboard can import it |
 | A helper two backend apps need | the package that owns the topic; move it only when the second user exists | no stubs |
 | A gateway-only helper | `apps/gateway/src/` | apps do not share through each other |
-| A new test helper | `apps/<app>/src/testing/` (one app) or `packages/db/src/testing/` (DB harness) | test-only, lint-checked |
+| A new test helper | `apps/<app>/src/testing/` (one app) or `packages/db/src/testing/` (DB harness; add an `export` line to its `testing/index.ts`) | test-only; lint-checked (GW-042) |
 | A new table | `packages/db/src/schema/`, then `pnpm db:generate` | migrations live with the schema |
 
 GW-024 under this model: `ErrorBody` and `ErrorCode` are the admin-api and dashboard contract, so they move to the `@gw/shared` main entry. `AppError`, `toErrorResponse` and `CODE_BY_STATUS` stay in admin-api (they are HTTP code).
 
 ## 11. Rules and enforcement
 
-The "Enforced by" column names what checks the rule today, or the task that adds the check.
+The "Enforced by" column names what checks the rule today, or the task that adds the check. Every "must not import" and "Does not" statement in this page and the READMEs has a row here; "review" means no tool checks it.
 
 | # | Rule | Enforced by |
 |---|---|---|
 | R1 | Apps never import other apps | GW-042 lint (`no-restricted-imports`, `import-x/no-relative-packages`); words only until then |
 | R2 | Packages never import apps or tools | GW-042 lint |
-| R3 | Package direction: shared, then db, then auth | `tsc -b` rejects reference cycles; GW-042 lint for the direction |
+| R3 | Package direction: shared, then db, then auth; `@gw/shared` imports no `@gw/*` | `tsc -b` rejects reference cycles; GW-042 lint for the direction |
 | R4 | Import a package only through its `exports` | `exports` (Node and TypeScript refuse other paths) |
 | R5 | No `drizzle-orm` or `pg` in app runtime code | GW-042 lint; true today |
-| R6 | No queries on `db` in app runtime code | GW-045: apps get an opaque `Database` handle with no query methods, so `db.select(...)` is a TypeScript error (decision 3D, ADR 0014) |
-| R7 | `testing/` helpers and `@gw/db/testing` only in tests | GW-042 lint |
-| R8 | `@gw/shared` main entry stays browser-safe | GW-042 lint (`node:*` and `crypto` banned in shared main and in the dashboard) |
+| R6 | No queries on `db` in app runtime code | GW-045: apps get an opaque `Database` handle (a value you can pass around but not query), so `db.select(...)` is a TypeScript error (decision 3D, ADR 0014) |
+| R7 | `testing/` helpers and `@gw/db/testing` only in tests and test config (`vitest.global-setup.ts`) | GW-042 lint (scope must allow test config files) |
+| R8 | `@gw/shared` main entry stays browser-safe; the dashboard imports only `@gw/shared` main (never `@gw/db`, `@gw/auth`, `@gw/shared/crypto` or `node:*`) | GW-042 lint |
 | R9 | No import cycles (runtime imports only) | GW-042 lint (`import-x/no-cycle`) |
-| R10 | Gateway never imports `@gw/auth`; worker never imports `fastify` | GW-042 lint |
-| R11 | Only startup reads `process.env` | GW-042 lint (`main.ts` allowed); true today in admin-api runtime code |
-| R12 | Log tables only through the LogStore | `exports` (`logs.ts` is not exported) |
+| R10 | Gateway and worker never import `@gw/auth`; worker never imports `fastify` | GW-042 lint |
+| R11 | Only startup reads `process.env` (app runtime files only) | GW-042 lint (`main.ts` allowed); true today in admin-api runtime code |
+| R12 | Log tables only through the LogStore | `packages/db/src/index.ts` does not re-export `logs.ts` |
 | R13 | Route, service, repository rule (section 6) | review |
-| R14 | Hot path does only lookup, limits, forward, stream | review; the gateway README states it |
+| R14 | Hot path does only lookup, limits, forward, stream; the gateway never writes Postgres directly, computes rollups or sends emails | review; the gateway README states it (see section 7) |
 | R15 | Markdown is never reformatted | GW-042 (Prettier config); see PITFALLS.md: Prettier skips Markdown |
+| R16 | `@gw/auth` and `@gw/db` never import HTTP frameworks (`fastify`) | GW-042 lint |
+| R17 | Tools never import any `@gw/*` | GW-042 lint |
+| R18 | Repositories never import crypto (`@gw/shared/crypto`, `node:crypto`) | GW-042 lint (path `packages/db/src/repositories/**`) |
+| R19 | Schema never imports repositories | GW-042 lint (path `packages/db/src/schema/**`) |
+| R20 | App runtime code never imports tables or the `schema` namespace from `@gw/db` (types such as `Project` are fine) | review; after GW-045 a table import is useless anyway (no query client) |
+| R21 | Services never import `fastify` or touch request/reply; scopes and hooks never import another feature's service | review (lint cannot tell a service from a route by file path) |
+
+### Other guardrails (decision 6A)
+
+| # | Guardrail | Status |
+|---|---|---|
+| G1 | A test checks every `PITFALLS.md: <heading>` pointer names a real heading | GW-042 |
+| G2 | Prettier cannot reformat Markdown from any folder | GW-042 (R15) |
+| G3 | Each README states its layer, what it may import and what it must not | done in GW-041 |
+| G4 | `CLAUDE.md` links this page | done in GW-041 |
+| G5 | `process.env` is read only in startup files | GW-042 (R11) |
+| G6 | A test checks each workspace dependency in a `package.json` has a matching `tsconfig.build.json` reference | Phase 2, GW-046 |
+
+Tests that already exist: `route-inventory.test.ts`, `project-ownership.test.ts`, `owner-access-rule.test.ts` (section 8).
 
 ### How apps get the database (decision 3D)
 
@@ -202,5 +226,5 @@ Small inconsistencies we decided to leave (decision 5A). The convention above is
 - `gateway-key-logs.test.ts` and `provider-key-logs.test.ts` sit at `src/` root, though they test one feature.
 - Limits live in a schemas file (`MAX_ACTIVE_GATEWAY_KEYS`, gateway-key-schemas.ts:7) and a service imports them from there. `storeProviderKey` takes a Zod-inferred body type (store-provider-key.ts:3-4, :18).
 - `packages/db` has one import cycle, type-only: `insert-project.ts:4` imports the `Project` type from `projects.ts`, which imports `insert-project.ts` (projects.ts:4, :8). It is erased at runtime, and rule R9 counts runtime imports only.
-- `readDatabaseUrl` in `packages/db/src/config.ts` defaults to `process.env`, and test helpers read it too. Neither is app startup code; R11 covers app runtime files only.
+- `readDatabaseUrl` (`packages/db/src/config.ts:2`) defaults to `process.env` and is called only by the db migrate CLI (`migrate-cli.ts:7`). Test-side readers: `apps/admin-api/src/testing/server-process.ts:20` (`process.env.PATH`) and `apps/admin-api/src/test-server.fixture.ts:7` (`loadConfig(process.env)`). None is app startup code; R11 covers app runtime files only.
 - Only the helpers in `apps/admin-api/src/testing/` carry a "Test-only" comment; most files in `packages/db/src/testing/` do not.

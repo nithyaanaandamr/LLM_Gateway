@@ -1,4 +1,5 @@
 import { createDb } from "@gw/db";
+import { toDrizzle } from "@gw/db/testing";
 import { sql } from "drizzle-orm";
 import { afterEach, beforeAll, describe, expect, inject, it } from "vitest";
 import { z } from "zod";
@@ -157,7 +158,7 @@ describe("database pool", () => {
     const admin = createDb(inject("testPostgres").adminUrl);
     try {
       const name = new URL(databaseUrl).pathname.slice(1);
-      const result = await admin.db.execute<{ n: number }>(
+      const result = await toDrizzle(admin.db).execute<{ n: number }>(
         sql`select count(*)::int as n from pg_stat_activity where datname = ${name}`,
       );
       return result.rows[0]?.n ?? 0;

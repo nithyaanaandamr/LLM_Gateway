@@ -1,5 +1,6 @@
 import { createAuth, CLIENT_IP_HEADER } from "@gw/auth";
 import { createDb, sessions, type DbConnection } from "@gw/db";
+import { toDrizzle } from "@gw/db/testing";
 import { eq } from "drizzle-orm";
 import Fastify, { type FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -53,7 +54,7 @@ describe("protected scope", () => {
   }
 
   function sessionRow(userId: string) {
-    return connection.db
+    return toDrizzle(connection.db)
       .select()
       .from(sessions)
       .where(eq(sessions.userId, userId))
@@ -61,7 +62,10 @@ describe("protected scope", () => {
   }
 
   function setExpiry(userId: string, expiresAt: Date) {
-    return connection.db.update(sessions).set({ expiresAt }).where(eq(sessions.userId, userId));
+    return toDrizzle(connection.db)
+      .update(sessions)
+      .set({ expiresAt })
+      .where(eq(sessions.userId, userId));
   }
 
   function me(headers: Record<string, string>) {

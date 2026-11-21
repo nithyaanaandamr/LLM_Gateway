@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { createDb, schema, type DbConnection } from "@gw/db";
+import { toDrizzle } from "@gw/db/testing";
 import { decryptProviderKey } from "@gw/shared/crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -53,7 +54,7 @@ describe("provider key routes", () => {
     apiRequest(app, config, { method: "DELETE", url: urlFor(projectId), cookie });
 
   const rowsOf = (projectId: string) =>
-    connection.db
+    toDrizzle(connection.db)
       .select()
       .from(schema.providerKeys)
       .where(eq(schema.providerKeys.projectId, projectId));

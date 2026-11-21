@@ -3,6 +3,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { createDb, schema, type DbConnection } from "@gw/db";
+import { toDrizzle } from "@gw/db/testing";
 import { decryptProviderKey, hashGatewayKey } from "@gw/shared/crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -36,12 +37,12 @@ describe("Phase 1 end to end (real process, real HTTP)", { timeout: 60_000 }, ()
 
   // The gateway's read path: only the key in hand, straight from the database
   async function gatewayLookup(key: string) {
-    const [keyRow] = await connection.db
+    const [keyRow] = await toDrizzle(connection.db)
       .select()
       .from(schema.gatewayKeys)
       .where(eq(schema.gatewayKeys.keyHash, hashGatewayKey(key)));
     const providerRows = keyRow
-      ? await connection.db
+      ? await toDrizzle(connection.db)
           .select()
           .from(schema.providerKeys)
           .where(eq(schema.providerKeys.projectId, keyRow.projectId))
@@ -132,7 +133,7 @@ describe("Phase 1 end to end (real process, real HTTP)", { timeout: 60_000 }, ()
     expect(removed.status).toBe(204);
     const after = await gatewayLookup(key);
     expect(after.keyRow).toBeUndefined();
-    const leftover = await connection.db
+    const leftover = await toDrizzle(connection.db)
       .select()
       .from(schema.providerKeys)
       .where(eq(schema.providerKeys.projectId, projectId));

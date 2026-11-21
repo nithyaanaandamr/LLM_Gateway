@@ -15,7 +15,7 @@
 | GW-017 | Dashboard auth (Better Auth) | Done |
 | GW-018 | Projects API | Done |
 | GW-019 | Provider key API | Open |
-| GW-020 | Gateway key API | Open |
+| GW-020 | Gateway key API | Done |
 | GW-021 | Phase 1 E2E test | Open |
 
 Status is `Open` or `Done`. The board bot sets `Done` after merge.

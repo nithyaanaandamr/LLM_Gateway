@@ -1,5 +1,5 @@
 # After a PR merges, move its tasks to Done on a rolling bot PR.
-# A human reviews and merges that PR. See ADR 0010 and PITFALLS.md: board bot.
+# A human reviews and merges that PR. See ADR 0010 and PITFALLS.md: Board bot.
 name: Board sync
 
 on:

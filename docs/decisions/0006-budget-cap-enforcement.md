@@ -6,7 +6,7 @@
 
 ## Context
 
-Cost is known only after the response. Parallel requests near the cap can all pass the check and overshoot. See PITFALLS.md: budget cap race.
+Cost is known only after the response. Parallel requests near the cap can all pass the check and overshoot. See PITFALLS.md: Budget cap race.
 
 ## Options
 

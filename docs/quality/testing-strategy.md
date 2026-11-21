@@ -19,7 +19,7 @@
 ## Rules
 
 - Tests never call real providers.
-- Visual baselines are generated and compared inside the same Docker image (see PITFALLS.md: visual tests).
+- Visual baselines are generated and compared inside the same Docker image (see PITFALLS.md: Visual tests need a fixed environment).
 - Must-test edge cases: concurrent requests near the budget cap, client disconnect mid-stream, Redis down (both modes), revoked key still in cache.
 
 ## Accessibility target

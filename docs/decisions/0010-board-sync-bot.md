@@ -29,6 +29,6 @@ Review gate: PRs into `main` need the `reviewed by nrk` label. A required check 
 - No more manual Done commits. Other board moves (Ready → In progress → In review) stay manual, in the task's own PR.
 - Board on `main` shows merged tasks as In review until the sync PR merges. Merge it before closing a sprint.
 - PR titles must list every task ID they complete.
-- Bot PRs' workflows wait for a maintainer's approval (GitHub rule for its built-in token), then run. One extra click per bot PR. See PITFALLS.md: board bot. *(Corrected 2026-10-22: first written as "don't trigger workflows".)*
+- Bot PRs' workflows wait for a maintainer's approval (GitHub rule for its built-in token), then run. One extra click per bot PR. See PITFALLS.md: Board bot. *(Corrected 2026-10-22: first written as "don't trigger workflows".)*
 - Repo settings needed: Actions may create PRs; `review-label` is a required check on `main`.
-- The bot rebuilds `bot/board-sync` from `main` on every run and replays earlier PRs' commits, instead of merging `main` in. Merging conflicted when feature PRs edited the board next to rows the bot had moved. See PITFALLS.md: board bot. *(Added 2026-10-31, GW-026.)*
+- The bot rebuilds `bot/board-sync` from `main` on every run and replays earlier PRs' commits, instead of merging `main` in. Merging conflicted when feature PRs edited the board next to rows the bot had moved. See PITFALLS.md: Board bot. *(Added 2026-10-31, GW-026.)*

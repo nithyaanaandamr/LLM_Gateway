@@ -235,6 +235,18 @@ AAD is compared byte by byte, so an uppercase UUID won't decrypt a row encrypted
 
 Each row stores which master key encrypted it. Decrypt picks the key by that version. Rotation = load old + new, re-encrypt rows with new, then drop old. `UnknownMasterKeyVersionError` means config is missing a key, not that data is bad. A new master key also restarts the random-nonce budget (see AES-GCM nonce reuse).
 
+## Changing MASTER_KEY makes stored provider keys unreadable
+
+Every row keeps master key version 1. A new key with the same version fails to decrypt, so all stored provider keys stop working. Rotation needs versions and a re-encrypt step (Backlog GW-035).
+
+## The admin API never reads a provider key back
+
+It stores `lastFour` when the key is saved and selects only summary columns (provider, last four, dates). With no decrypt path in the admin API, there is nothing to leak through a bug, a log line or an error.
+
+## We don't check provider key formats
+
+Formats change and differ per provider, so a regex would eventually refuse a valid key. We only trim, bound the length to 20 to 512 characters (the minimum keeps `lastFour` from showing most of a short key) and refuse our own `gw_live_` keys (a common paste mistake). The real check is a test call to the provider on save (Backlog GW-036).
+
 ## Node-only code in shared
 
 Crypto uses `node:crypto`, which browsers don't have. It is exported only via `@gw/shared/crypto`; the main `@gw/shared` entry (used by the dashboard) must never import it.

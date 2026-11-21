@@ -68,7 +68,7 @@ Routes about one project (`/api/projects/:projectId/...`) go in the project scop
 2. Put `:projectId` in the path. A route in the scope without it stops `app.ready()` with an error naming the route.
 3. In the handler, call `getProject(request)` for the project. Use its `id` (from the database), never the URL's `projectId`.
 4. Find child rows through the project: `WHERE id = :childId AND project_id = project.id`, never by the child's ID alone.
-5. Don't query the `projects` table directly: use the functions in `@gw/db` (`findAccessibleProject`, ...). Apps never import `drizzle-orm` at runtime.
+5. Don't query the `projects` table directly: use the functions in `@gw/db` (`findAccessibleProject`, ...). Apps never import `drizzle-orm` at runtime. The `db` an app receives has no query methods (it is an opaque `Database`); tests unwrap it with `toDrizzle` from `@gw/db/testing`.
 
 `src/project-ownership.test.ts` covers the new route with no test edits: it calls every `:projectId` route as a user who doesn't own the project and expects the same 404 as for a random UUID. Still write the route's own tests, including the child-row case. See [security.md](../../docs/architecture/security.md#authorization).
 

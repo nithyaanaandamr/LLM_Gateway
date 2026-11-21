@@ -479,3 +479,7 @@ A test that asserts a response body does **not** contain some text fails by chan
 ## Config readers take env as an argument
 
 `readDatabaseUrl(env)` used to default to `process.env`; now `env` is required. Rule R11 (see docs/architecture/code-structure.md): only entry-point files (`main.ts`, `*-cli.ts`) read `process.env`, and everything else gets `env` passed in. That also lets tests pass a plain object instead of changing the real environment. The cost: a caller outside this repo that calls `readDatabaseUrl()` now gets a TypeScript error, or a `TypeError` on `undefined.DATABASE_URL` in untyped JavaScript. Pass `process.env` from the entry point.
+
+## Apps get an opaque Database
+
+Apps get a `Database` handle with no query methods, so `db.select(...)` in app code is a type error (decision 3D in ADR 0014). Every query then goes through the repository functions in `@gw/db`. The handle is type-only: at runtime it is the same Drizzle object, so nothing changes in behaviour. Repositories unwrap it with `toDrizzle`; tests unwrap it with `toDrizzle` from `@gw/db/testing`; `@gw/auth` uses `@gw/db/drizzle` (lint bans that entry in apps from GW-042). The escape hatch is a deliberate cast (`db as unknown as ...`). Lint catches most casts; a hand-written type cast is left to review. `database-handle.test.ts` fails `pnpm typecheck` if `Database` gains a query method.

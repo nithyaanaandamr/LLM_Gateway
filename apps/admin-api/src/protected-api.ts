@@ -1,5 +1,6 @@
 import type { Auth } from "@gw/auth";
 import type { Database } from "@gw/db";
+import type { MasterKey } from "@gw/shared/crypto";
 import type { FastifyInstance } from "fastify";
 import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";
 import { requireSession } from "./auth/require-session.ts";
@@ -12,6 +13,7 @@ export interface ProtectedApiOptions {
   auth: Auth;
   trustedOrigins: string[];
   db: Database;
+  masterKey: MasterKey;
 }
 
 // Adds the checks to the plugin scope it is called in. Order matters: the Origin check is
@@ -31,6 +33,6 @@ export const protectedApi: FastifyPluginCallbackZod<ProtectedApiOptions> = (app,
   protectScope(app, options);
   void app.register(meRoutes);
   void app.register(projectCollectionRoutes, { db: options.db });
-  void app.register(projectScopedApi, { db: options.db });
+  void app.register(projectScopedApi, { db: options.db, masterKey: options.masterKey });
   done();
 };

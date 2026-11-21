@@ -10,5 +10,6 @@ export function testEnv(config: Config): Record<string, string> {
     BETTER_AUTH_SECRET: config.authSecret,
     BETTER_AUTH_URL: config.authBaseUrl,
     DASHBOARD_ORIGIN: config.dashboardOrigin,
+    MASTER_KEY: config.masterKey.key.export().toString("base64"),
   };
 }

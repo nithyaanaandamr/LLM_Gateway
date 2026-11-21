@@ -1,3 +1,4 @@
+import { InvalidMasterKeyError, parseMasterKey, type MasterKey } from "@gw/shared/crypto";
 import { z } from "zod";
 
 export const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const;
@@ -11,6 +12,7 @@ export type Config = {
   authSecret: string;
   authBaseUrl: string;
   dashboardOrigin: string;
+  masterKey: MasterKey;
 };
 
 const PORT_RULE = "must be a whole number from 0 to 65535";
@@ -61,6 +63,19 @@ function isHttpsOrLocal(value: string): boolean {
   return protocol === "https:" || LOCAL_HOSTS.includes(hostname);
 }
 
+// Phase 1 has one master key, always version 1 (rotation: Backlog GW-035).
+// The error text is fixed and never holds the value (see PITFALLS.md: Master key parsing).
+// see PITFALLS.md: Changing MASTER_KEY makes stored provider keys unreadable
+const masterKeySchema = z.string({ error: "is required" }).transform((base64, ctx) => {
+  try {
+    return parseMasterKey({ version: 1, base64 });
+  } catch (error) {
+    if (!(error instanceof InvalidMasterKeyError)) throw error;
+    ctx.addIssue(error.message);
+    return z.NEVER;
+  }
+});
+
 // Both origin vars: valid origin, http(s), https unless local.
 // abort: skip later checks on a value that is not a usable origin
 const originSchema = z
@@ -85,6 +100,7 @@ const envSchema = z.object({
     .refine(hasNoOuterWhitespace, SECRET_WHITESPACE_RULE),
   BETTER_AUTH_URL: originSchema,
   DASHBOARD_ORIGIN: originSchema,
+  MASTER_KEY: masterKeySchema,
 });
 
 export class ConfigError extends Error {
@@ -123,5 +139,6 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     authSecret: data.BETTER_AUTH_SECRET,
     authBaseUrl: data.BETTER_AUTH_URL,
     dashboardOrigin: data.DASHBOARD_ORIGIN,
+    masterKey: data.MASTER_KEY,
   };
 }

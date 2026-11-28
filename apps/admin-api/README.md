@@ -1,5 +1,9 @@
 # @gw/admin-api
 
+- **Layer:** App (backend for the dashboard)
+- **May import:** `@gw/auth`, `@gw/db`, `@gw/shared` (and `@gw/shared/crypto`)
+- **Does not:** import other apps; import `drizzle-orm` or `pg` in runtime code; use testing helpers outside tests
+
 Backend for the dashboard.
 
 **Does:** sign-up/login (sessions), projects, provider key storage (encrypt), gateway key issuance (show once, store hash), revocation, limits and budget settings, spend reports.

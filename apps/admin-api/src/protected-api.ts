@@ -7,7 +7,7 @@ import { requireSession } from "./auth/require-session.ts";
 import { requireTrustedOrigin } from "./auth/require-trusted-origin.ts";
 import { projectCollectionRoutes } from "./projects/project-collection-routes.ts";
 import { projectScopedApi } from "./projects/project-scoped-api.ts";
-import { meRoutes } from "./routes/me.ts";
+import { meRoutes } from "./routes/me-routes.ts";
 
 export interface ProtectedApiOptions {
   auth: Auth;

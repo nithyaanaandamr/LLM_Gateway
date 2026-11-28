@@ -4,10 +4,10 @@ import { projects } from "../schema/index.ts";
 import { insertProject } from "./insert-project.ts";
 import { lockForLimit } from "./limit-lock.ts";
 import { accessibleProjects } from "./project-access.ts";
+import type { Project } from "./project-type.ts";
 
 export { insertProject, isProjectNameTaken } from "./insert-project.ts";
-
-export type Project = typeof projects.$inferSelect;
+export type { Project } from "./project-type.ts";
 
 // COLLATE "C" sorts by bytes, so the order is the same on every Postgres. The database's
 // default collation differs between installs (Alpine: bytes, glibc: a, A, b, B).

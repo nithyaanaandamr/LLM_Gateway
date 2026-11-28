@@ -1,10 +1,6 @@
 import type { Project } from "@gw/db";
 import { z } from "zod";
 
-// Exact cap: counted and inserted under a per-user lock (insertProjectWithinLimit)
-// see PITFALLS.md: Limits are counted under a lock
-export const MAX_PROJECTS_PER_USER = 100;
-
 // Control characters (NUL makes Postgres fail with a 500; newlines and BEL break logs and UIs)
 // and bidi overrides and isolates (they make a name display as something else) are refused.
 // Other format characters (ZWJ in emoji, ZWNJ in Persian and Indic scripts) are real text.

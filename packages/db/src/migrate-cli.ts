@@ -4,7 +4,7 @@ import { describeError } from "./error-message.ts";
 import { runMigrations } from "./migrate.ts";
 
 try {
-  await runMigrations(readDatabaseUrl());
+  await runMigrations(readDatabaseUrl(process.env));
   console.log("Migrations applied");
 } catch (error) {
   console.error("Migration failed:", describeError(error));

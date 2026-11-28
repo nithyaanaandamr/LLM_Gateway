@@ -3,6 +3,7 @@
 | Area | Doc | What it answers |
 |---|---|---|
 | Architecture | [overview.md](architecture/overview.md) | What the pieces are and how a request flows |
+| | [code-structure.md](architecture/code-structure.md) | Layers, import rules, where new code goes |
 | | [tech-stack.md](architecture/tech-stack.md) | Each technology: role, why, alternatives |
 | | [security.md](architecture/security.md) | Keys, encryption, privacy |
 | | [data-model.md](architecture/data-model.md) | Tables and relations *(draft)* |

@@ -1,4 +1,5 @@
-// Values global setup passes to test files (see PITFALLS.md: Test database per file)
+// Test-only, not in the main entry.
+// Set by global setup (see PITFALLS.md: Test database per file)
 export interface TestPostgres {
   adminUrl: string; // URL of the "postgres" maintenance database
   templateDatabase: string;

@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-024 | Move error shape types to `shared` | 1 | `ErrorBody` and `ErrorCode` (types only) live in `packages/shared`; admin-api imports them; usable by the dashboard |
 
 ## Ready
 
@@ -72,3 +71,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-044 | Fix the flaky long-URL error test | 1.5 | 2026-11-28 |
 | GW-041 | Code structure spec | 1.5 | 2026-11-28 |
 | GW-045 | Opaque database handle for apps | 1.5 | 2026-11-28 |
+| GW-024 | Move error shape types to `shared` | 1 | 2026-11-28 |

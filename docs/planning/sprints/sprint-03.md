@@ -11,7 +11,7 @@
 | GW-042 | Enforce code boundaries in ESLint | Open |
 | GW-045 | Opaque database handle for apps | Done |
 | GW-023 | Source maps in `start` and `dev` | Done |
-| GW-024 | Move error shape types to `shared` | Open |
+| GW-024 | Move error shape types to `shared` | Done |
 | GW-025 | Fix board-bot PITFALLS reference | Done |
 | GW-044 | Fix the flaky long-URL error test | Done |
 

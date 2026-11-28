@@ -1,5 +1,6 @@
+import type { ErrorBody } from "@gw/shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { AppError, toErrorResponse, type ErrorBody } from "./errors.ts";
+import { AppError, toErrorResponse } from "./errors.ts";
 import { errorForLog } from "./log-error.ts";
 
 export function errorHandler(

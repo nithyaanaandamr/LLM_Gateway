@@ -31,7 +31,7 @@ apps/admin-api ──► @gw/auth ──► @gw/db ──► (drizzle-orm, pg)
 
 apps/gateway, apps/worker, apps/dashboard   empty: src/index.ts is `export {}`
 tools/board-bot, tools/fake-provider        no workspace imports (fake-provider is empty)
-@gw/shared main entry                        empty `export {}` (`packages/shared/src/index.ts`)
+@gw/shared main entry                        error body types only (`ErrorBody`, `ErrorCode`, `ValidationDetail`)
 ```
 
 Target direction, including the planned apps (arrow means "may import"):
@@ -65,7 +65,7 @@ Package entry points today:
 |---|---|---|
 | `@gw/db` | `.`, `./drizzle`, `./testing` | `createDb`, `Database` type, `runMigrations`, `readDatabaseUrl`, `isUniqueViolation`, the repository functions, all app and auth tables, and a `schema` namespace (`packages/db/src/index.ts`). Not exported: `logs.ts` (`schema/index.ts` leaves it out), `lockForLimit` and `accessibleProjects` (internal files). |
 | `@gw/auth` | `.` | `createAuth`, `tableOptions`, `CLIENT_IP_HEADER`, `fromNodeHeaders`, types (packages/auth/src/index.ts). Imports the `Database` type from `@gw/db` and `toDrizzle` from `@gw/db/drizzle`; no HTTP code. |
-| `@gw/shared` | `.`, `./crypto` | Main: nothing yet. `./crypto`: master key, provider key encrypt/decrypt, gateway key helpers. |
+| `@gw/shared` | `.`, `./crypto` | Main: error body types (`ErrorBody`, `ErrorCode`, `ValidationDetail`). `./crypto`: master key, provider key encrypt/decrypt, gateway key helpers. |
 
 No app imports another app, and no package imports an app. `tsc -b` refuses circular project references, so a package-to-package cycle already fails the build.
 
@@ -172,7 +172,7 @@ Check against today's code:
 | A new test helper | `apps/<app>/src/testing/` (one app) or `packages/db/src/testing/` (DB harness; add an `export` line to its `testing/index.ts`) | test-only; lint-checked (GW-042) |
 | A new table | `packages/db/src/schema/`, then `pnpm db:generate` | migrations live with the schema |
 
-GW-024 under this model: `ErrorBody` and `ErrorCode` are the admin-api and dashboard contract, so they move to the `@gw/shared` main entry. `AppError`, `toErrorResponse` and `CODE_BY_STATUS` stay in admin-api (they are HTTP code).
+GW-024 under this model: `ErrorBody` and `ErrorCode` are the admin-api and dashboard contract, so they moved to the `@gw/shared` main entry (`error-body.ts`). `AppError`, `toErrorResponse` and `CODE_BY_STATUS` stayed in admin-api (they are HTTP code). `ErrorCode` is written out once, in shared; `CODE_BY_STATUS` is typed `Record<number, ErrorCode>`, so the compiler rejects any code not in the union.
 
 ## 11. Rules and enforcement
 

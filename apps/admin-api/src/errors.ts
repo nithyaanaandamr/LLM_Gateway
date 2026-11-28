@@ -1,24 +1,6 @@
 // One error shape for the whole API (see PITFALLS.md: Error responses never leak internals)
+import type { ErrorBody, ErrorCode, ValidationDetail } from "@gw/shared";
 import type { FastifyError } from "fastify";
-
-export const ERROR_CODES = [
-  "BAD_REQUEST",
-  "VALIDATION_FAILED",
-  "UNAUTHORIZED",
-  "FORBIDDEN",
-  "NOT_FOUND",
-  "CONFLICT",
-  "PAYLOAD_TOO_LARGE",
-  "UNSUPPORTED_MEDIA_TYPE",
-  "RATE_LIMITED",
-  "INTERNAL",
-] as const;
-export type ErrorCode = (typeof ERROR_CODES)[number];
-
-export type ValidationDetail = { path: string; message: string };
-export type ErrorBody = {
-  error: { code: ErrorCode; message: string; requestId: string; details?: ValidationDetail[] };
-};
 
 // Message must be safe to show to the client
 export class AppError extends Error {
@@ -33,7 +15,8 @@ export class AppError extends Error {
   }
 }
 
-// Status -> code for 4xx; used by the error handler and the auth bridge
+// Status -> code for 4xx; used by the error handler and the auth bridge.
+// The annotation rejects values that are not in ErrorCode; it does not require every code to be mapped.
 export const CODE_BY_STATUS: Record<number, ErrorCode> = {
   400: "BAD_REQUEST",
   401: "UNAUTHORIZED",

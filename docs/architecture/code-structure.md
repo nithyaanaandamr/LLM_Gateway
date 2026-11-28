@@ -30,7 +30,8 @@ apps/admin-api ──► @gw/auth ──► @gw/db ──► (drizzle-orm, pg)
       └──► @gw/shared/crypto              (node:crypto)
 
 apps/gateway, apps/worker, apps/dashboard   empty: src/index.ts is `export {}`
-tools/board-bot, tools/fake-provider        no workspace imports (fake-provider is empty)
+tools/board-bot, tools/fake-provider,
+tools/repo-checks                           no workspace imports (fake-provider is empty)
 @gw/shared main entry                        empty `export {}` (`packages/shared/src/index.ts`)
 ```
 
@@ -58,6 +59,7 @@ Target direction, including the planned apps (arrow means "may import"):
 | `apps/dashboard` (planned) | React UI; talks to admin-api over HTTP only | `@gw/shared` main | `@gw/db`, `@gw/auth`, `@gw/shared/crypto`, `node:*`, other apps |
 | `tools/board-bot` | CI board sync | Node only | any `@gw/*` |
 | `tools/fake-provider` (planned) | fake LLM API for tests | Node only | any `@gw/*` |
+| `tools/repo-checks` | guardrail tests: boundary lint cases, `PITFALLS.md` pointers | Node, `eslint`, `vitest` | any `@gw/*` |
 
 Package entry points today:
 
@@ -146,7 +148,7 @@ Check against today's code:
 ## 8. Tests and test helpers
 
 - Tests sit next to the file they test (`x.test.ts`); a test of one feature sits in that feature's folder. Tests that cover the whole app (route inventory, ownership) sit at `src/` root; end-to-end tests in `src/e2e/`.
-- Tests may import anything in their app, `@gw/db` tables, `drizzle-orm`, testing helpers and `tools/fake-provider`. They never import another app's source. Tests never call real providers.
+- Tests may import anything in their app, `@gw/db` tables, `drizzle-orm`, testing helpers and `tools/fake-provider`. They never import another app's source or `@gw/db/drizzle`. Tests never call real providers.
 - Test helpers are `apps/<app>/src/testing/*.ts` and `@gw/db/testing`. Only tests and test config (`vitest.global-setup.ts` in admin-api and auth, which import `@gw/db/testing`) import them. Each helper file starts with a "Test-only" comment, and none is imported by runtime code (checked by grep).
 - `tsconfig.build.json` excludes `src/testing`, but TypeScript still compiles any file that runtime code imports, so the exclude does not block a bad import. Lint does (`no-restricted-imports`).
 - Guardrail tests that already exist: `route-inventory.test.ts` (every route needs a session unless allow-listed), `project-ownership.test.ts`, and `owner-access-rule.test.ts` (only two files name `owner_id`).
@@ -190,7 +192,7 @@ The "Enforced by" column names what checks the rule today, or the task that adds
 | R8 | `@gw/shared` main entry stays browser-safe; the dashboard imports only `@gw/shared` main (never `@gw/db`, `@gw/auth`, `@gw/shared/crypto` or `node:*`) | ESLint `no-restricted-imports`; tested in `tools/repo-checks/src/boundaries.test.ts` |
 | R9 | No import cycles (runtime imports only) | ESLint `import-x/no-cycle`; tested on `tools/repo-checks/fixtures/cycle` |
 | R10 | Gateway and worker never import `@gw/auth`; worker never imports `fastify` | ESLint `no-restricted-imports`; tested in `tools/repo-checks/src/boundaries.test.ts` |
-| R11 | Only entry-point files read `process.env`: `main.ts` files and `*-cli.ts` files (today `apps/admin-api/src/main.ts`, `packages/db/src/migrate-cli.ts`, `tools/board-bot/src/main.ts`). Every other runtime file takes `env` as an argument (tests, fixtures and test helpers may read it) | ESLint `no-restricted-properties` (`main.ts` and `*-cli.ts` exempt); tested in `tools/repo-checks/src/boundaries.test.ts`; see PITFALLS.md: Config readers take env as an argument |
+| R11 | Only entry-point files read `process.env`: `src/main.ts` and `src/*-cli.ts` files (today `apps/admin-api/src/main.ts`, `packages/db/src/migrate-cli.ts`, `tools/board-bot/src/main.ts`). Every other runtime file takes `env` as an argument (tests, fixtures and test helpers may read it) | ESLint `no-restricted-properties` (`src/main.ts` and `src/*-cli.ts` exempt); tested in `tools/repo-checks/src/boundaries.test.ts`. The rule matches `process.env` and `const { env } = process`, not `import { env } from "node:process"`, aliasing (`const p = process`) or `globalThis.process.env` (review only); see PITFALLS.md: Config readers take env as an argument |
 | R12 | Log tables only through the LogStore | `packages/db/src/index.ts` does not re-export `logs.ts` |
 | R13 | Route, service, repository rule (section 6) | review |
 | R14 | Hot path does only lookup, limits, forward, stream; the gateway never writes Postgres directly, computes rollups or sends emails | review; the gateway README states it (see section 7) |

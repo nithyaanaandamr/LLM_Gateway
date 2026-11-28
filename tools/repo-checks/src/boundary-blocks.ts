@@ -51,7 +51,7 @@ export const BLOCK_ROWS: BlockRow[] = [
   {
     block: "dashboard runtime",
     file: "apps/dashboard/src/x.ts",
-    groups: [OTHER_APPS, FAKE_PROVIDER, TESTING, NODE, DASHBOARD_PACKAGES],
+    groups: [OTHER_APPS, FAKE_PROVIDER, TESTING, DRIZZLE_PG, FASTIFY, NODE, DASHBOARD_PACKAGES],
   },
   { block: "packages", file: "packages/db/src/x.test.ts", groups: [OTHER_APPS] },
   {

@@ -491,3 +491,11 @@ In `eslint.config.js`, when several blocks match one file and set the same rule,
 ## import-x skips .ts files by default
 
 `eslint-plugin-import-x` only follows files whose extension is in its `import-x/extensions` setting, and the default is `.js`. With only a resolver set, `import-x/no-cycle` reports nothing on a TypeScript cycle and still looks happy. The config sets `"import-x/extensions": [".ts", ".tsx", ".js"]`; the cycle test in `tools/repo-checks` fails if that line is removed. `no-cycle` ignores `import type` on purpose (runtime cycles only, decision 4A in ADR 0014).
+
+## Bare Node built-ins bypass node: bans
+
+`import "fs"` and `import "node:fs"` load the same module, but a ban written for `node:*` only matches the second. `eslint-plugin-import-x` 4.18.1 has no `enforce-node-protocol-usage` rule to force the prefix, so the `NODE` and `CRYPTO_IN_REPO` groups in `eslint.config.js` also list the bare names (and `name/*` subpaths). The list is hand-written: a built-in missing from it (or a new one) is not caught. If a rule that forces `node:` ever ships, use it and drop the list.
+
+## Slow first lint in tests
+
+The `tools/repo-checks` tests lint with the whole root config, and the first case loads ESLint and every plugin. On a cold CI runner that can pass vitest's 5 s default, so `tools/repo-checks/vitest.config.ts` sets `testTimeout` and `hookTimeout` to 30 s. A timeout there means a slow runner, not a broken rule.

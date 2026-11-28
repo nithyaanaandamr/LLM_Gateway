@@ -42,6 +42,7 @@ describe("findBrokenPointers", () => {
     "see PITFALLS.md: Budget cap race, Typo here",
     "see PITFALLS.md: Budget cap race; Typo here",
     "see PITFALLS.md: Budget cap race, Type-aware lint is bad",
+    "see PITFALLS.md: <Typo>",
   ])("rejects %s", (line) => {
     expect(broken(line)).toHaveLength(1);
   });
@@ -52,6 +53,10 @@ describe("findBrokenPointers", () => {
     "see PITFALLS.md: Budget cap race and Typo here",
   ])("limitation: accepts %s", (line) => {
     expect(broken(line)).toEqual([]);
+  });
+
+  test("a wrapped pointer is not checked (known limit)", () => {
+    expect(broken("see PITFALLS.md:\nNope")).toEqual([]);
   });
 
   test("reports file and line", () => {

@@ -110,6 +110,30 @@ export const BAD_CASES: BadCase[] = [
     code: `import "node:fs";`,
   },
   {
+    name: "R8 dashboard imports bare fs",
+    rule: NRI,
+    file: "apps/dashboard/src/x.ts",
+    code: `import "fs";`,
+  },
+  {
+    name: "R8 dashboard imports bare fs subpath",
+    rule: NRI,
+    file: "apps/dashboard/src/x.ts",
+    code: `import "fs/promises";`,
+  },
+  {
+    name: "R8 dashboard imports drizzle-orm",
+    rule: NRI,
+    file: "apps/dashboard/src/x.ts",
+    code: `import "drizzle-orm";`,
+  },
+  {
+    name: "R8 shared main imports bare crypto",
+    rule: NRI,
+    file: "packages/shared/src/x.ts",
+    code: `import "crypto";`,
+  },
+  {
     name: "R8 shared main imports node:crypto",
     rule: NRI,
     file: "packages/shared/src/x.ts",
@@ -184,6 +208,12 @@ export const BAD_CASES: BadCase[] = [
     rule: NRI,
     file: "packages/db/src/repositories/x.ts",
     code: `import "node:crypto";`,
+  },
+  {
+    name: "R18 repository imports bare crypto",
+    rule: NRI,
+    file: "packages/db/src/repositories/x.ts",
+    code: `import "crypto";`,
   },
   {
     name: "R19 schema imports repositories",

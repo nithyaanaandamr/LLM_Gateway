@@ -42,8 +42,40 @@ const FASTIFY = {
   group: ["fastify", "fastify/*", "@fastify/*"],
   message: "Only apps that serve HTTP (admin-api, gateway) use fastify.",
 };
+// Bare names (`fs`) bypass `node:*`, so list them too. see PITFALLS.md: Bare Node built-ins bypass node: bans
+const BARE_BUILTINS = [
+  "assert",
+  "buffer",
+  "child_process",
+  "cluster",
+  "crypto",
+  "dgram",
+  "dns",
+  "events",
+  "fs",
+  "http",
+  "http2",
+  "https",
+  "net",
+  "os",
+  "path",
+  "perf_hooks",
+  "process",
+  "querystring",
+  "readline",
+  "stream",
+  "string_decoder",
+  "tls",
+  "tty",
+  "url",
+  "util",
+  "v8",
+  "vm",
+  "worker_threads",
+  "zlib",
+].flatMap((name) => [name, `${name}/*`]);
 const NODE = {
-  group: ["node:*"],
+  group: ["node:*", ...BARE_BUILTINS],
   message: "Browser-safe code: no Node built-ins. Node-only helpers go in @gw/shared/crypto.",
 };
 const DASHBOARD_PACKAGES = {
@@ -63,7 +95,7 @@ const AUTH_IN_DB = {
   message: "@gw/db sits below @gw/auth; it never imports it.",
 };
 const CRYPTO_IN_REPO = {
-  group: ["@gw/shared/crypto", "node:crypto"],
+  group: ["@gw/shared/crypto", "node:crypto", "crypto"],
   message: "Repositories store what they are given; encrypting is a service's job.",
 };
 const REPOS_IN_SCHEMA = {
@@ -137,7 +169,7 @@ export default defineConfig(
   boundaryBlock(["apps/worker/src/**"], [...APP_RUNTIME, AUTH, FASTIFY], TEST_FILES),
   boundaryBlock(
     ["apps/dashboard/src/**"],
-    [OTHER_APPS, FAKE_PROVIDER, TESTING, NODE, DASHBOARD_PACKAGES],
+    [OTHER_APPS, FAKE_PROVIDER, TESTING, DRIZZLE_PG, FASTIFY, NODE, DASHBOARD_PACKAGES],
     TEST_FILES,
   ),
   // R2, R3, R7, R16, R18, R19: packages

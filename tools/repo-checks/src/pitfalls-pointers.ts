@@ -1,5 +1,7 @@
 // Finds `PITFALLS.md: <heading>` pointers whose heading is not in PITFALLS.md (guardrail G1).
+// Only one line is read: a pointer wrapped across two lines is not checked.
 const PREFIX = "PITFALLS.md: ";
+const PLACEHOLDER = "<heading>"; // the only skipped pointer text
 const SEPARATOR = /^(, |; | and )/;
 const SPACED_END = /^\s+[|)]/; // table cell: "heading |"
 const END_CHARS = ")|.:`*\"'!?]"; // a pointer may stop at these
@@ -49,7 +51,7 @@ function namesRealHeadings(text: string, headings: string[]): boolean {
   return rest[0] === "," || rest[0] === ";"; // "heading," then a line break or no space
 }
 
-/** Pointers in one file's text that name no real heading. `<...>` placeholders are skipped. */
+/** Pointers in one file's text that name no real heading. the literal `<heading>` placeholder is skipped. */
 export function findBrokenPointers(
   file: string,
   content: string,
@@ -60,7 +62,7 @@ export function findBrokenPointers(
     let from = lineText.indexOf(PREFIX);
     while (from !== -1) {
       const text = lineText.slice(from + PREFIX.length);
-      if (!text.startsWith("<") && !namesRealHeadings(text, headings)) {
+      if (!text.startsWith(PLACEHOLDER) && !namesRealHeadings(text, headings)) {
         broken.push({ file, line: index + 1, text: text.slice(0, 60) });
       }
       from = lineText.indexOf(PREFIX, from + PREFIX.length);

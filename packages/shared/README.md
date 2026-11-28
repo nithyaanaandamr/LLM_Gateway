@@ -6,7 +6,7 @@
 
 Code used by more than one app.
 
-- Error body types (`ErrorBody`, `ErrorCode`, `ValidationDetail`): the shape admin-api returns and the dashboard reads (types only)
+- Error body types (`ErrorBody`, `ErrorCode`, `ValidationDetail`): the shape admin-api returns and the dashboard reads (types only; no runtime list of codes until something needs one)
 - Zod schemas for API contracts (types are inferred from them)
 - Cost calculation (tokens × dated price)
 - Key format helpers (`gw_live_...`)

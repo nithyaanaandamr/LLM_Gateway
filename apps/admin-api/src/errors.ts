@@ -16,7 +16,7 @@ export class AppError extends Error {
 }
 
 // Status -> code for 4xx; used by the error handler and the auth bridge.
-// The annotation makes the compiler check every value against ErrorCode in @gw/shared.
+// The annotation rejects values that are not in ErrorCode; it does not require every code to be mapped.
 export const CODE_BY_STATUS: Record<number, ErrorCode> = {
   400: "BAD_REQUEST",
   401: "UNAUTHORIZED",

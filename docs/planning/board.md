@@ -13,12 +13,12 @@ Source of truth for all work. Workflow: [README.md](README.md).
 |---|---|---|---|
 | GW-045 | Opaque database handle for apps | 1.5 | `@gw/db` gives apps a `Database` type with no query methods, so `db.select(...)` or `db.query…` in app code is a TypeScript error; repository functions unwrap it inside `@gw/db`; tests unwrap it through `@gw/db/testing`; `@gw/auth` gets the real client through an export that lint bans in apps (GW-042); a type test proves app code can't query; no behaviour change; all tests pass |
 | GW-042 | Enforce code boundaries in ESLint | 1.5 | Every rule in `code-structure.md` (GW-041) marked GW-042 is checked by `pnpm lint` in CI, including: apps never import other apps; `testing/` helpers and `@gw/db/testing` only in tests; no `drizzle-orm` or `pg` in app runtime code; `shared`'s main entry stays browser-safe; no import cycles; only entry-point files (`main.ts`, `*-cli.ts`) read `process.env`. One deliberately bad import per rule fails lint (tested); existing code passes or is fixed; a test checks every `PITFALLS.md: <heading>` pointer names a real heading; Prettier can't reformat Markdown from any folder |
+| GW-024 | Move error shape types to `shared` | 1 | `ErrorBody` and `ErrorCode` (types only) live in `packages/shared`; admin-api imports them; usable by the dashboard |
 
 ## Ready
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-024 | Move error shape types to `shared` | 1 | `ErrorBody` and `ErrorCode` (types only) live in `packages/shared`; admin-api imports them; usable by the dashboard |
 
 ## Backlog
 

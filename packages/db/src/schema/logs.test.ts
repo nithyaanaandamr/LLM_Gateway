@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type DbConnection } from "../client.ts";
-import { createTestDatabase } from "../testing/index.ts";
+import { createTestDatabase, toDrizzle } from "../testing/index.ts";
 import { requestLogs, type OUTCOMES, type REASONS, type USAGE_SOURCES } from "./logs.ts";
 
 let connection: DbConnection;
-const db = () => connection.db;
+const db = () => toDrizzle(connection.db);
 
 beforeAll(async () => {
   connection = createDb(await createTestDatabase());

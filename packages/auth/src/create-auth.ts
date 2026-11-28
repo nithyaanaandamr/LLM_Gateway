@@ -1,4 +1,5 @@
 import type { Database } from "@gw/db";
+import { toDrizzle } from "@gw/db/drizzle";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { CLIENT_IP_HEADER } from "./client-ip-header.ts";
 import { tableOptions } from "./table-options.ts";
@@ -16,7 +17,7 @@ export interface CreateAuthOptions {
 }
 
 export function createAuth({ db, secret, baseURL, trustedOrigins, log }: CreateAuthOptions) {
-  const tables = tableOptions(db);
+  const tables = tableOptions(toDrizzle(db));
   return betterAuth({
     ...tables,
     // Explicit values win over the env vars Better Auth reads itself

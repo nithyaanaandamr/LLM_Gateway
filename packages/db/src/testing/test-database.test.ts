@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type DbConnection } from "../client.ts";
-import { createTestDatabase } from "./index.ts";
+import { createTestDatabase, toDrizzle } from "./index.ts";
 
 describe("createTestDatabase", () => {
   const connections: DbConnection[] = [];
@@ -19,7 +19,7 @@ describe("createTestDatabase", () => {
   });
 
   it("clones the migrated template (schemas exist)", async () => {
-    const result = await connections[0]!.db.execute<{ n: number }>(
+    const result = await toDrizzle(connections[0]!.db).execute<{ n: number }>(
       sql`select count(*)::int as n from information_schema.schemata where schema_name in ('app', 'auth', 'logs')`,
     );
     expect(result.rows[0]?.n).toBe(3);
@@ -30,8 +30,8 @@ describe("createTestDatabase", () => {
   });
 
   it("isolates databases from each other", async () => {
-    await connections[0]!.db.execute(sql`create table app.probe (id int)`);
-    const result = await connections[1]!.db.execute<{ t: string | null }>(
+    await toDrizzle(connections[0]!.db).execute(sql`create table app.probe (id int)`);
+    const result = await toDrizzle(connections[1]!.db).execute<{ t: string | null }>(
       sql`select to_regclass('app.probe') as t`,
     );
     expect(result.rows[0]?.t).toBeNull();

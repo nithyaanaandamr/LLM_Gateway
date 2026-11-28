@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type DbConnection } from "./client.ts";
 import { MIGRATIONS_FOLDER, runMigrations } from "./migrate.ts";
-import { createTestDatabase } from "./testing/index.ts";
+import { createTestDatabase, toDrizzle } from "./testing/index.ts";
 
 describe("runMigrations", () => {
   let url: string;
@@ -20,14 +20,14 @@ describe("runMigrations", () => {
   });
 
   const schemaNames = async () => {
-    const result = await connection.db.execute<{ schema_name: string }>(
+    const result = await toDrizzle(connection.db).execute<{ schema_name: string }>(
       sql`select schema_name from information_schema.schemata`,
     );
     return result.rows.map((row) => row.schema_name);
   };
 
   const appliedCount = async () => {
-    const result = await connection.db.execute<{ n: number }>(
+    const result = await toDrizzle(connection.db).execute<{ n: number }>(
       sql`select count(*)::int as n from drizzle.__drizzle_migrations`,
     );
     return result.rows[0]?.n;

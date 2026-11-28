@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type DbConnection } from "../client.ts";
 import { gatewayKeys, users } from "../schema/index.ts";
-import { createTestDatabase } from "../testing/index.ts";
+import { createTestDatabase, toDrizzle } from "../testing/index.ts";
 import {
   countActiveGatewayKeys,
   insertGatewayKey,
@@ -16,6 +16,7 @@ import { insertProject } from "./projects.ts";
 
 let connection: DbConnection;
 const db = () => connection.db;
+const drizzleDb = () => toDrizzle(connection.db);
 
 beforeAll(async () => {
   connection = createDb(await createTestDatabase());
@@ -24,7 +25,7 @@ beforeAll(async () => {
 afterAll(() => connection.close());
 
 async function insertProjectForNewUser(): Promise<string> {
-  const [user] = await db()
+  const [user] = await drizzleDb()
     .insert(users)
     .values({ name: "Test", email: `${randomUUID()}@example.com` })
     .returning();
@@ -58,7 +59,7 @@ describe("insertGatewayKey", () => {
 
     const row = await insertGatewayKey(db(), input);
 
-    const [stored] = await db().select().from(gatewayKeys).where(eq(gatewayKeys.id, row.id));
+    const [stored] = await drizzleDb().select().from(gatewayKeys).where(eq(gatewayKeys.id, row.id));
     expect(stored?.keyHash.equals(input.keyHash)).toBe(true);
   });
 });
@@ -119,7 +120,7 @@ describe("revokeGatewayKey", () => {
     await revokeGatewayKey(db(), projectId, key.id);
     const [first] = await listGatewayKeys(db(), projectId);
     // now() is the transaction start, so make sure the clock moves between the two calls
-    await db().execute(sql`select pg_sleep(0.02)`);
+    await drizzleDb().execute(sql`select pg_sleep(0.02)`);
 
     expect(await revokeGatewayKey(db(), projectId, key.id)).toBe(true);
 
@@ -175,7 +176,9 @@ describe("insertGatewayKeyWithinLimit", () => {
   it("is exact under parallel calls: 20 at 19 of 20 give one created, 19 refused", async () => {
     const projectId = await projectWithActiveKeys(19);
     // Open every pooled connection first, so the calls really overlap
-    await Promise.all(Array.from({ length: 10 }, () => db().execute(sql`select pg_sleep(0.05)`)));
+    await Promise.all(
+      Array.from({ length: 10 }, () => drizzleDb().execute(sql`select pg_sleep(0.05)`)),
+    );
 
     const results = await Promise.all(
       Array.from({ length: 20 }, (_, n) =>

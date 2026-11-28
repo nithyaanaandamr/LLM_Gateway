@@ -148,7 +148,7 @@ Check against today's code:
 - Tests sit next to the file they test (`x.test.ts`); a test of one feature sits in that feature's folder. Tests that cover the whole app (route inventory, ownership) sit at `src/` root; end-to-end tests in `src/e2e/`.
 - Tests may import anything in their app, `@gw/db` tables, `drizzle-orm`, testing helpers and `tools/fake-provider`. They never import another app's source. Tests never call real providers.
 - Test helpers are `apps/<app>/src/testing/*.ts` and `@gw/db/testing`. Only tests and test config (`vitest.global-setup.ts` in admin-api and auth, which import `@gw/db/testing`) import them. Each helper file starts with a "Test-only" comment, and none is imported by runtime code (checked by grep).
-- `tsconfig.build.json` excludes `src/testing`, but TypeScript still compiles any file that runtime code imports, so the exclude does not block a bad import. Lint does (GW-042).
+- `tsconfig.build.json` excludes `src/testing`, but TypeScript still compiles any file that runtime code imports, so the exclude does not block a bad import. Lint does (`no-restricted-imports`).
 - Guardrail tests that already exist: `route-inventory.test.ts` (every route needs a session unless allow-listed), `project-ownership.test.ts`, and `owner-access-rule.test.ts` (only two files name `owner_id`).
 
 ## 9. Naming and file placement
@@ -169,7 +169,7 @@ Check against today's code:
 | A type the dashboard and admin-api both use (for example `ErrorBody`) | `packages/shared/src/` main entry, types or browser-safe values only | the dashboard can import it |
 | A helper two backend apps need | the package that owns the topic; move it only when the second user exists | no stubs |
 | A gateway-only helper | `apps/gateway/src/` | apps do not share through each other |
-| A new test helper | `apps/<app>/src/testing/` (one app) or `packages/db/src/testing/` (DB harness; add an `export` line to its `testing/index.ts`) | test-only; lint-checked (GW-042) |
+| A new test helper | `apps/<app>/src/testing/` (one app) or `packages/db/src/testing/` (DB harness; add an `export` line to its `testing/index.ts`) | test-only; lint-checked (`no-restricted-imports`) |
 | A new table | `packages/db/src/schema/`, then `pnpm db:generate` | migrations live with the schema |
 
 GW-024 under this model: `ErrorBody` and `ErrorCode` are the admin-api and dashboard contract, so they move to the `@gw/shared` main entry. `AppError`, `toErrorResponse` and `CODE_BY_STATUS` stay in admin-api (they are HTTP code).
@@ -180,25 +180,25 @@ The "Enforced by" column names what checks the rule today, or the task that adds
 
 | # | Rule | Enforced by |
 |---|---|---|
-| R1 | Apps never import other apps | GW-042 lint (`no-restricted-imports`, `import-x/no-relative-packages`); words only until then |
-| R2 | Packages never import apps or tools | GW-042 lint |
-| R3 | Package direction: shared, then db, then auth; `@gw/shared` imports no `@gw/*` | `tsc -b` rejects reference cycles; GW-042 lint for the direction |
+| R1 | Apps never import other apps | ESLint `no-restricted-imports`, `import-x/no-relative-packages`; tested in `tools/repo-checks/src/boundaries.test.ts` |
+| R2 | Packages never import apps or tools | ESLint `no-restricted-imports` (packages block); tested in `tools/repo-checks/src/boundaries.test.ts` |
+| R3 | Package direction: shared, then db, then auth; `@gw/shared` imports no `@gw/*` | `tsc -b` rejects reference cycles; ESLint `no-restricted-imports` for the direction; tested in `tools/repo-checks/src/boundaries.test.ts` |
 | R4 | Import a package only through its `exports` | `exports` (Node and TypeScript refuse other paths) |
-| R5 | No `drizzle-orm` or `pg` in app runtime code | GW-042 lint; true today |
-| R6 | No queries on `db` in app runtime code | TypeScript (GW-045): apps get an opaque `Database` handle (a value you can pass around but not query), so `db.select(...)` is a compile error; `database-handle.test.ts` pins it (decision 3D, ADR 0014). Until GW-042 lint lands, the two unwrap entries (`@gw/db/drizzle`, `@gw/db/testing`) are open to any app file and caught only in review |
-| R7 | `testing/` helpers and `@gw/db/testing` only in tests and test config (`vitest.global-setup.ts`) | GW-042 lint (scope must allow test config files) |
-| R8 | `@gw/shared` main entry stays browser-safe; the dashboard imports only `@gw/shared` main (never `@gw/db`, `@gw/auth`, `@gw/shared/crypto` or `node:*`) | GW-042 lint |
-| R9 | No import cycles (runtime imports only) | GW-042 lint (`import-x/no-cycle`); true today |
-| R10 | Gateway and worker never import `@gw/auth`; worker never imports `fastify` | GW-042 lint |
-| R11 | Only entry-point files read `process.env`: `main.ts` files and `*-cli.ts` files (today `apps/admin-api/src/main.ts`, `packages/db/src/migrate-cli.ts`, `tools/board-bot/src/main.ts`). Every other runtime file takes `env` as an argument (tests, fixtures and test helpers may read it) | GW-042 lint (`main.ts` and `*-cli.ts` allowed); true today (checked by grep); see PITFALLS.md: Config readers take env as an argument |
+| R5 | No `drizzle-orm` or `pg` in app runtime code | ESLint `no-restricted-imports`; tested in `tools/repo-checks/src/boundaries.test.ts` |
+| R6 | No queries on `db` in app runtime code | TypeScript (GW-045): apps get an opaque `Database` handle (a value you can pass around but not query), so `db.select(...)` is a compile error; `database-handle.test.ts` pins it (decision 3D, ADR 0014) |
+| R7 | `testing/` helpers and `@gw/db/testing` only in tests and test config (`vitest.global-setup.ts`) | ESLint `no-restricted-imports` (test files and config are exempt); tested in `tools/repo-checks/src/boundaries.test.ts` |
+| R8 | `@gw/shared` main entry stays browser-safe; the dashboard imports only `@gw/shared` main (never `@gw/db`, `@gw/auth`, `@gw/shared/crypto` or `node:*`) | ESLint `no-restricted-imports`; tested in `tools/repo-checks/src/boundaries.test.ts` |
+| R9 | No import cycles (runtime imports only) | ESLint `import-x/no-cycle`; tested on `tools/repo-checks/fixtures/cycle` |
+| R10 | Gateway and worker never import `@gw/auth`; worker never imports `fastify` | ESLint `no-restricted-imports`; tested in `tools/repo-checks/src/boundaries.test.ts` |
+| R11 | Only entry-point files read `process.env`: `main.ts` files and `*-cli.ts` files (today `apps/admin-api/src/main.ts`, `packages/db/src/migrate-cli.ts`, `tools/board-bot/src/main.ts`). Every other runtime file takes `env` as an argument (tests, fixtures and test helpers may read it) | ESLint `no-restricted-properties` (`main.ts` and `*-cli.ts` exempt); tested in `tools/repo-checks/src/boundaries.test.ts`; see PITFALLS.md: Config readers take env as an argument |
 | R12 | Log tables only through the LogStore | `packages/db/src/index.ts` does not re-export `logs.ts` |
 | R13 | Route, service, repository rule (section 6) | review |
 | R14 | Hot path does only lookup, limits, forward, stream; the gateway never writes Postgres directly, computes rollups or sends emails | review; the gateway README states it (see section 7) |
-| R15 | Markdown is never reformatted | GW-042 (Prettier config); see PITFALLS.md: Prettier skips Markdown |
-| R16 | `@gw/auth` and `@gw/db` never import HTTP frameworks (`fastify`) | GW-042 lint |
-| R17 | Tools never import any `@gw/*` | GW-042 lint |
-| R18 | Repositories never import crypto (`@gw/shared/crypto`, `node:crypto`) | GW-042 lint (path `packages/db/src/repositories/**`) |
-| R19 | Schema never imports repositories | GW-042 lint (path `packages/db/src/schema/**`) |
+| R15 | Markdown is never reformatted | `.prettierrc.json` override (`requirePragma` for `*.md`); see PITFALLS.md: Prettier skips Markdown |
+| R16 | `@gw/auth` and `@gw/db` never import HTTP frameworks (`fastify`) | ESLint `no-restricted-imports`; tested in `tools/repo-checks/src/boundaries.test.ts` |
+| R17 | Tools never import any `@gw/*` | ESLint `no-restricted-imports`; tested in `tools/repo-checks/src/boundaries.test.ts` |
+| R18 | Repositories never import crypto (`@gw/shared/crypto`, `node:crypto`) | ESLint `no-restricted-imports` (path `packages/db/src/repositories/**`); tested in `tools/repo-checks/src/boundaries.test.ts` |
+| R19 | Schema never imports repositories | ESLint `no-restricted-imports` (path `packages/db/src/schema/**`); tested in `tools/repo-checks/src/boundaries.test.ts` |
 | R20 | App runtime code never imports tables or the `schema` namespace from `@gw/db` (types such as `Project` are fine) | review; a table import is useless anyway, since apps have no query client (GW-045) |
 | R21 | Services never import `fastify` or touch request/reply; scopes and hooks never import another feature's service | review (lint cannot tell a service from a route by file path) |
 
@@ -206,11 +206,11 @@ The "Enforced by" column names what checks the rule today, or the task that adds
 
 | # | Guardrail | Status |
 |---|---|---|
-| G1 | A test checks every `PITFALLS.md: <heading>` pointer names a real heading | GW-042 |
-| G2 | Prettier cannot reformat Markdown from any folder | GW-042 (R15) |
+| G1 | A test checks every `PITFALLS.md: <heading>` pointer names a real heading | `tools/repo-checks/src/pitfalls-pointers.test.ts` |
+| G2 | Prettier cannot reformat Markdown from any folder | `.prettierrc.json` override (R15) |
 | G3 | Each README states its layer, what it may import and what it must not | done in GW-041 |
 | G4 | `CLAUDE.md` links this page | done in GW-041 |
-| G5 | `process.env` is read only in entry-point files (`main.ts`, `*-cli.ts`) | GW-042 (R11) |
+| G5 | `process.env` is read only in entry-point files (`main.ts`, `*-cli.ts`) | ESLint `no-restricted-properties` (R11) |
 | G6 | A test checks each workspace dependency in a `package.json` has a matching `tsconfig.build.json` reference | Phase 2, GW-046 |
 
 Tests that already exist: `route-inventory.test.ts`, `project-ownership.test.ts`, `owner-access-rule.test.ts` (section 8).

@@ -13,7 +13,7 @@
 | GW-023 | Source maps in `start` and `dev` | Done |
 | GW-024 | Move error shape types to `shared` | Open |
 | GW-025 | Fix board-bot PITFALLS reference | Done |
-| GW-044 | Fix the flaky long-URL error test | Open |
+| GW-044 | Fix the flaky long-URL error test | Done |
 
 Status is `Open` or `Done`. The board bot sets `Done` after merge.
 

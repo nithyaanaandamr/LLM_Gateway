@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-044 | Fix the flaky long-URL error test | 1.5 | The 414 test checks the body for text the random `requestId` can't contain (13 `a`s in a row instead of `aaaa`), so it never fails by chance; it still fails if the URL is echoed |
 | GW-041 | Code structure spec | 1.5 | `docs/architecture/code-structure.md` names each layer (HTTP routes and hooks, services, repositories, schema, shared packages, test helpers), what each may import, and how layers talk (calls, errors, dependencies passed in); says when a route may call a repository without a service; covers every app, package and tool, including the planned gateway and worker; an ADR records the layering and the lint tool; owner approved; each app, package and tool README states its layer, what it may import and what it must not; CLAUDE.md links the doc |
 
 ## Ready
@@ -72,3 +71,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-040 | Close Sprint 02, start Sprint 03 | 1 | 2026-11-21 |
 | GW-023 | Source maps in `start` and `dev` | 1 | 2026-11-28 |
 | GW-025 | Fix board-bot PITFALLS reference | 0 | 2026-11-28 |
+| GW-044 | Fix the flaky long-URL error test | 1.5 | 2026-11-28 |

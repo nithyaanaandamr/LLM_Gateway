@@ -30,7 +30,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 |---|---|---|---|
 | GW-007 | Fake provider server | 2 | Streaming + non-streaming; configurable delay, error, disconnect |
 | GW-009 | Research Redis failure handling | 2 | Findings recorded in a new ADR superseding 0008 |
-| GW-027 | Readiness route `GET /ready` | 1 | 200 when a DB query succeeds, 503 in our error shape when not; `routes/health.ts` comment updated (it promises this "with the first DB-backed task") |
+| GW-027 | Readiness route `GET /ready` | 1 | 200 when a DB query succeeds, 503 in our error shape when not; `routes/health-routes.ts` comment updated (it promises this "with the first DB-backed task") |
 | GW-028 | Admin API behind a proxy: trust proxy setting | 1 | `ADMIN_API_TRUST_PROXY` config; `request.ip` is the real client IP behind Cloudflare Tunnel / ALB; a test shows two clients get separate auth rate-limit buckets |
 | GW-029 | Shared auth rate-limit store (Redis) | 1 | Limits hold across two admin-api instances and a restart; uses Better Auth `secondaryStorage` or `customStorage` on our Redis |
 | GW-030 | Password reset and email verification | 1 | Needs an email sender (dev: log or fake inbox); reset link expires; reset revokes other sessions; tests cover token reuse and expiry |

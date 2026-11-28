@@ -13,7 +13,7 @@ import type { Config } from "./config.ts";
 import { errorHandler, frameworkErrorHandler, notFoundHandler } from "./error-handler.ts";
 import { loggerOptions } from "./logger.ts";
 import { protectedApi } from "./protected-api.ts";
-import { healthRoutes } from "./routes/health.ts";
+import { healthRoutes } from "./routes/health-routes.ts";
 
 export function buildApp(config: Config) {
   const app = Fastify({

@@ -1,3 +1,4 @@
+// Test-only (not exported from the main entry). Creates one database per test file.
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { inject } from "vitest";

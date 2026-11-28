@@ -1,7 +1,7 @@
 import type { Queryable } from "../client.ts";
 import { projects } from "../schema/index.ts";
 import { isUniqueViolation } from "../unique-violation.ts";
-import type { Project } from "./projects.ts";
+import type { Project } from "./project-type.ts";
 
 // The only code that writes owner_id (with project-access.ts, the only code naming it).
 // Pass the logged-in user's ID, never a value from a request body.

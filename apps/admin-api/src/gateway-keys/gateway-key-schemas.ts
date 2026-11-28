@@ -2,10 +2,6 @@ import type { GatewayKeySummary } from "@gw/db";
 import { z } from "zod";
 import { projectName } from "../projects/project-schemas.ts";
 
-// Exact cap on active (not revoked) keys, counted and inserted under a per-project lock
-// see PITFALLS.md: Limits are counted under a lock
-export const MAX_ACTIVE_GATEWAY_KEYS = 20;
-
 // Same rule as project names (trim, NFC, no control or bidi characters, 1 to 100):
 // the DB CHECK is the same, and a NUL character would otherwise be a Postgres 500.
 export const gatewayKeyName = projectName;

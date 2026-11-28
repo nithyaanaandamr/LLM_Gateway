@@ -1,7 +1,7 @@
 import { insertGatewayKeyWithinLimit, type Database, type GatewayKeySummary } from "@gw/db";
 import { generateGatewayKey } from "@gw/shared/crypto";
 import { AppError } from "../errors.ts";
-import { MAX_ACTIVE_GATEWAY_KEYS } from "./gateway-key-schemas.ts";
+import { MAX_ACTIVE_GATEWAY_KEYS } from "./gateway-key-limits.ts";
 
 export type IssuedGatewayKey = {
   key: string; // the only copy: show once, never store or log

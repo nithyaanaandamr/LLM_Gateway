@@ -51,8 +51,8 @@ Full spec: [code-structure.md](../architecture/code-structure.md).
 1. **Services (a):** A. A route may call a repository directly; add a service when the work uses another package or needs 2+ repository calls.
 2. **Lint tool (b):** A. Core `no-restricted-imports` plus `eslint-plugin-import-x` (`no-cycle`, `no-relative-packages`). GW-042 adds the rules, each proved by one deliberately bad import.
 3. **Database handle (d):** D. `@gw/db` gives apps an opaque `Database` type with no query methods. Repository functions unwrap it inside `@gw/db`; tests unwrap it through `@gw/db/testing`; `@gw/auth` gets the real client through an export that lint bans in apps. Built by GW-045. The `drizzle-orm`/`pg` import ban stays as well.
-4. **Cycles (c):** A. Runtime cycles only.
-5. **Naming inconsistencies:** leave them and list them as named exceptions in `code-structure.md`.
+4. **Cycles (c):** A. Runtime cycles only. The one type-only cycle in `@gw/db` is removed in GW-041.
+5. **Naming inconsistencies:** fix them in GW-041 so the rules have no named exceptions (owner overruled the first choice, 2026-11-28). No behaviour change.
 
 ## Consequences
 

@@ -1,7 +1,13 @@
-import { upsertProviderKey, type Database, type Project, type ProviderKeySummary } from "@gw/db";
+import {
+  upsertProviderKey,
+  type Database,
+  type Project,
+  type Provider,
+  type ProviderKeySummary,
+} from "@gw/db";
 import { encryptProviderKey, type MasterKey } from "@gw/shared/crypto";
-import type { z } from "zod";
-import type { providerKeyBody } from "./provider-key-schemas.ts";
+
+export type ProviderKeyInput = { provider: Provider; key: string };
 
 // Last four characters (code points, so an emoji is never cut in half)
 function lastFour(key: string): string {
@@ -15,7 +21,7 @@ export function storeProviderKey(
   db: Database,
   masterKey: MasterKey,
   project: Project,
-  { provider, key }: z.infer<typeof providerKeyBody>,
+  { provider, key }: ProviderKeyInput,
 ): Promise<ProviderKeySummary> {
   const encrypted = encryptProviderKey({ plaintext: key, projectId: project.id, masterKey });
   return upsertProviderKey(db, {

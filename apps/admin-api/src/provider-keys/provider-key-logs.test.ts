@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { request, sessionCookieOf } from "./testing/fetch-requests.ts";
-import { killAllServers, startListening } from "./testing/server-process.ts";
-import { testConfig } from "./testing/test-config.ts";
-import { testEnv } from "./testing/test-env.ts";
+import { request, sessionCookieOf } from "../testing/fetch-requests.ts";
+import { killAllServers, startListening } from "../testing/server-process.ts";
+import { testConfig } from "../testing/test-config.ts";
+import { testEnv } from "../testing/test-env.ts";
 
-const FIXTURE = fileURLToPath(new URL("./test-server.fixture.ts", import.meta.url));
+const FIXTURE = fileURLToPath(new URL("../test-server.fixture.ts", import.meta.url));
 
 let env: Record<string, string>;
 

@@ -11,7 +11,6 @@ Source of truth for all work. Workflow: [README.md](README.md).
 
 | ID | Task | Phase | Acceptance criteria |
 |---|---|---|---|
-| GW-045 | Opaque database handle for apps | 1.5 | `@gw/db` gives apps a `Database` type with no query methods, so `db.select(...)` or `db.query…` in app code is a TypeScript error; repository functions unwrap it inside `@gw/db`; tests unwrap it through `@gw/db/testing`; `@gw/auth` gets the real client through an export that lint bans in apps (GW-042); a type test proves app code can't query; no behaviour change; all tests pass |
 | GW-024 | Move error shape types to `shared` | 1 | `ErrorBody` and `ErrorCode` (types only) live in `packages/shared`; admin-api imports them; usable by the dashboard |
 
 ## Ready
@@ -72,3 +71,4 @@ Source of truth for all work. Workflow: [README.md](README.md).
 | GW-025 | Fix board-bot PITFALLS reference | 0 | 2026-11-28 |
 | GW-044 | Fix the flaky long-URL error test | 1.5 | 2026-11-28 |
 | GW-041 | Code structure spec | 1.5 | 2026-11-28 |
+| GW-045 | Opaque database handle for apps | 1.5 | 2026-11-28 |

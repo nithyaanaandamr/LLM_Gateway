@@ -9,7 +9,7 @@
 |---|---|---|
 | GW-041 | Code structure spec | Done |
 | GW-042 | Enforce code boundaries in ESLint | Open |
-| GW-045 | Opaque database handle for apps | Open |
+| GW-045 | Opaque database handle for apps | Done |
 | GW-023 | Source maps in `start` and `dev` | Done |
 | GW-024 | Move error shape types to `shared` | Open |
 | GW-025 | Fix board-bot PITFALLS reference | Done |

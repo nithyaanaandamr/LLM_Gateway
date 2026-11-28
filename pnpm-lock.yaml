@@ -281,6 +281,8 @@ importers:
 
   tools/fake-provider: {}
 
+  tools/repo-checks: {}
+
 packages:
 
   '@babel/code-frame@7.29.7':

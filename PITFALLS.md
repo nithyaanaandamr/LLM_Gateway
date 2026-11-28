@@ -1,6 +1,6 @@
 # Pitfalls
 
-Deeper notes on gotchas, edge cases and trade-offs. Code comments point here (e.g. `// see PITFALLS.md: budget cap race`).
+Deeper notes on gotchas, edge cases and trade-offs. Code comments point here (e.g. `// see PITFALLS.md: Budget cap race`).
 Add new entries; don't rewrite old ones.
 
 ---

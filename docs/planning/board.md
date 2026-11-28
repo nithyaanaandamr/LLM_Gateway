@@ -13,6 +13,7 @@ Source of truth for all work. Workflow: [README.md](README.md).
 |---|---|---|---|
 | GW-023 | Source maps in `start` and `dev` | 1 | Apps run Node with `--enable-source-maps`; a 5xx stack trace in the logs points at `.ts` lines; ADR 0012 recipe updated |
 | GW-025 | Fix board-bot PITFALLS reference | 0 | `tools/board-bot/tsconfig.json` comment cites the real heading "Node runs TypeScript directly"; every other `PITFALLS.md: <heading>` pointer names a real heading |
+| GW-044 | Fix the flaky long-URL error test | 1.5 | The 414 test checks the body for text the random `requestId` can't contain (13 `a`s in a row instead of `aaaa`), so it never fails by chance; it still fails if the URL is echoed |
 
 ## Ready
 

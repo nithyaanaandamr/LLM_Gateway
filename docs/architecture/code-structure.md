@@ -63,7 +63,7 @@ Package entry points today:
 
 | Package | `exports` | What the main entry gives |
 |---|---|---|
-| `@gw/db` | `.`, `./testing` | `createDb`, `Database` type, `runMigrations`, `readDatabaseUrl`, `isUniqueViolation`, the repository functions, all app and auth tables, and a `schema` namespace (`packages/db/src/index.ts`). Not exported: `logs.ts` (`schema/index.ts` leaves it out), `lockForLimit` and `accessibleProjects` (internal files). |
+| `@gw/db` | `.`, `./drizzle`, `./testing` | `createDb`, `Database` type, `runMigrations`, `readDatabaseUrl`, `isUniqueViolation`, the repository functions, all app and auth tables, and a `schema` namespace (`packages/db/src/index.ts`). Not exported: `logs.ts` (`schema/index.ts` leaves it out), `lockForLimit` and `accessibleProjects` (internal files). |
 | `@gw/auth` | `.` | `createAuth`, `tableOptions`, `CLIENT_IP_HEADER`, `fromNodeHeaders`, types (packages/auth/src/index.ts). Imports only the `Database` type from `@gw/db`; no HTTP code. |
 | `@gw/shared` | `.`, `./crypto` | Main: nothing yet. `./crypto`: master key, provider key encrypt/decrypt, gateway key helpers. |
 
@@ -185,7 +185,7 @@ The "Enforced by" column names what checks the rule today, or the task that adds
 | R3 | Package direction: shared, then db, then auth; `@gw/shared` imports no `@gw/*` | `tsc -b` rejects reference cycles; GW-042 lint for the direction |
 | R4 | Import a package only through its `exports` | `exports` (Node and TypeScript refuse other paths) |
 | R5 | No `drizzle-orm` or `pg` in app runtime code | GW-042 lint; true today |
-| R6 | No queries on `db` in app runtime code | GW-045: apps get an opaque `Database` handle (a value you can pass around but not query), so `db.select(...)` is a TypeScript error (decision 3D, ADR 0014) |
+| R6 | No queries on `db` in app runtime code | TypeScript (GW-045): apps get an opaque `Database` handle (a value you can pass around but not query), so `db.select(...)` is a compile error; `database-handle.test.ts` pins it (decision 3D, ADR 0014) |
 | R7 | `testing/` helpers and `@gw/db/testing` only in tests and test config (`vitest.global-setup.ts`) | GW-042 lint (scope must allow test config files) |
 | R8 | `@gw/shared` main entry stays browser-safe; the dashboard imports only `@gw/shared` main (never `@gw/db`, `@gw/auth`, `@gw/shared/crypto` or `node:*`) | GW-042 lint |
 | R9 | No import cycles (runtime imports only) | GW-042 lint (`import-x/no-cycle`); true today |
@@ -199,7 +199,7 @@ The "Enforced by" column names what checks the rule today, or the task that adds
 | R17 | Tools never import any `@gw/*` | GW-042 lint |
 | R18 | Repositories never import crypto (`@gw/shared/crypto`, `node:crypto`) | GW-042 lint (path `packages/db/src/repositories/**`) |
 | R19 | Schema never imports repositories | GW-042 lint (path `packages/db/src/schema/**`) |
-| R20 | App runtime code never imports tables or the `schema` namespace from `@gw/db` (types such as `Project` are fine) | review; after GW-045 a table import is useless anyway (no query client) |
+| R20 | App runtime code never imports tables or the `schema` namespace from `@gw/db` (types such as `Project` are fine) | review; a table import is useless anyway, since apps have no query client (GW-045) |
 | R21 | Services never import `fastify` or touch request/reply; scopes and hooks never import another feature's service | review (lint cannot tell a service from a route by file path) |
 
 ### Other guardrails (decision 6A)
@@ -217,4 +217,4 @@ Tests that already exist: `route-inventory.test.ts`, `project-ownership.test.ts`
 
 ### How apps get the database (decision 3D)
 
-Today `Database` is the full Drizzle client, so a route could write `db.select().from(...)` with no import at all. GW-045 fixes this in the type system: `@gw/db` hands apps an opaque `Database` handle with no query methods. Repository functions unwrap it inside `@gw/db`. Tests unwrap it through `@gw/db/testing` (R7 bans that in runtime code). `@gw/auth` gets the real client through an export that lint bans in apps. Until GW-045 lands, R6 is only a rule in words.
+A route could once write `db.select().from(...)` with no import at all, because `Database` was the full Drizzle client. GW-045 fixed this in the type system: `@gw/db` hands apps an opaque `Database` handle with no query methods. Repository functions unwrap it inside `@gw/db`. Tests unwrap it through `@gw/db/testing` (R7 bans that in runtime code). `@gw/auth` gets the real client through `@gw/db/drizzle`, an export that GW-042 lint bans in apps.

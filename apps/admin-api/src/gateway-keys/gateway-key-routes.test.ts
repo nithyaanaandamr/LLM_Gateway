@@ -8,6 +8,7 @@ import {
   listGatewayKeys,
   type DbConnection,
 } from "@gw/db";
+import { toDrizzle } from "@gw/db/testing";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp, type App } from "../app.ts";
@@ -85,7 +86,7 @@ describe("gateway key routes", () => {
   }
 
   const rowText = async (keyId: string): Promise<string> => {
-    const result = await connection.db.execute<{ text: string }>(
+    const result = await toDrizzle(connection.db).execute<{ text: string }>(
       sql`select (k.*)::text as text from app.gateway_keys k where k.id = ${keyId}`,
     );
     return result.rows[0]?.text ?? "";
@@ -116,7 +117,7 @@ describe("gateway key routes", () => {
 
       const { key, gatewayKey } = await issued(cookie, projectId);
 
-      const [row] = await connection.db
+      const [row] = await toDrizzle(connection.db)
         .select()
         .from(gatewayKeys)
         .where(eq(gatewayKeys.id, gatewayKey.id));

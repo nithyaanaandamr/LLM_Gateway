@@ -42,6 +42,8 @@ Plain functions in `src/repositories/` that take `db` and load or store rows. Th
 
 **`Transaction` and `Queryable`** (`client.ts`): `Transaction` is what a `db.transaction` callback receives; `Queryable` is `Database | Transaction`. Repository functions that must work both alone and inside a cap transaction (`insertProject`, `countAccessibleProjects`) take a `Queryable`.
 
+**`Database` and `toDrizzle`** (`client.ts`): apps get `Database`, a handle with no query methods (type-only; the same object at runtime), so they must use the repository functions. `toDrizzle(db)` returns the real Drizzle client. Use it only inside `@gw/db`, in tests (from `@gw/db/testing`) and in `@gw/auth` (from `@gw/db/drizzle`). See PITFALLS.md: Apps get an opaque Database.
+
 Name repository functions after their table (`insertGatewayKey`, not `insert`): the index does `export *` from each file, and two equal names are a TypeScript error.
 
 ## Add a migration

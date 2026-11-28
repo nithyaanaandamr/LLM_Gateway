@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type DbConnection } from "./client.ts";
 import { insertProject } from "./repositories/projects.ts";
 import { projects, users } from "./schema/index.ts";
-import { createTestDatabase } from "./testing/index.ts";
+import { createTestDatabase, toDrizzle } from "./testing/index.ts";
 import { isUniqueViolation } from "./unique-violation.ts";
 
 const NAME_CONSTRAINT = "projects_owner_id_name_unique";
@@ -14,7 +14,7 @@ let ownerId: string;
 
 beforeAll(async () => {
   connection = createDb(await createTestDatabase());
-  const [user] = await connection.db
+  const [user] = await toDrizzle(connection.db)
     .insert(users)
     .values({ name: "Test", email: `${randomUUID()}@example.com` })
     .returning();
@@ -45,7 +45,7 @@ describe("isUniqueViolation", () => {
     const first = await insertProject(connection.db, ownerId, "pk");
 
     const error = await caught(() =>
-      connection.db.insert(projects).values({ id: first.id, ownerId, name: "pk2" }),
+      toDrizzle(connection.db).insert(projects).values({ id: first.id, ownerId, name: "pk2" }),
     );
 
     expect(isUniqueViolation(error, "projects_pkey")).toBe(true);
@@ -53,7 +53,7 @@ describe("isUniqueViolation", () => {
   });
 
   it("is false for a database error that is not a unique violation", async () => {
-    const error = await caught(() => connection.db.execute(sql`select 1 / 0`));
+    const error = await caught(() => toDrizzle(connection.db).execute(sql`select 1 / 0`));
 
     expect(isUniqueViolation(error, NAME_CONSTRAINT)).toBe(false);
   });

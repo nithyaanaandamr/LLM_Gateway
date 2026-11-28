@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type DbConnection } from "../client.ts";
 import { users } from "../schema/index.ts";
-import { createTestDatabase } from "../testing/index.ts";
+import { createTestDatabase, toDrizzle } from "../testing/index.ts";
 import {
   countAccessibleProjects,
   deleteProject,
@@ -17,6 +17,7 @@ import {
 
 let connection: DbConnection;
 const db = () => connection.db;
+const drizzleDb = () => toDrizzle(connection.db);
 
 beforeAll(async () => {
   connection = createDb(await createTestDatabase());
@@ -25,7 +26,7 @@ beforeAll(async () => {
 afterAll(() => connection.close());
 
 async function insertUser(): Promise<string> {
-  const [user] = await db()
+  const [user] = await drizzleDb()
     .insert(users)
     .values({ name: "Test", email: `${randomUUID()}@example.com` })
     .returning();
@@ -47,7 +48,7 @@ describe("listAccessibleProjects", () => {
   it("sorts by bytes whatever the collation: A, B, a, b", async () => {
     // A linguistic collation would give a, A, b, B. Set it on the column, so the test is
     // sensitive to the ORDER BY even where the database default already sorts by bytes.
-    await db().execute(
+    await drizzleDb().execute(
       sql`alter table app.projects alter column name type text collate "und-x-icu"`,
     );
     const me = await insertUser();
@@ -207,7 +208,9 @@ describe("insertProjectWithinLimit", () => {
   it("is exact under parallel calls: 20 at 99 of 100 give one created, 19 refused", async () => {
     const me = await userWith(99);
     // Open every pooled connection first, so the calls really overlap
-    await Promise.all(Array.from({ length: 10 }, () => db().execute(sql`select pg_sleep(0.05)`)));
+    await Promise.all(
+      Array.from({ length: 10 }, () => drizzleDb().execute(sql`select pg_sleep(0.05)`)),
+    );
 
     const results = await Promise.all(
       Array.from({ length: 20 }, (_, n) => insertProjectWithinLimit(db(), me, `race${n}`, 100)),

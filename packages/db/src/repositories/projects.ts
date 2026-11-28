@@ -1,5 +1,5 @@
 import { and, asc, eq, sql } from "drizzle-orm";
-import type { Database, Queryable } from "../client.ts";
+import { toDrizzle, type Database, type Queryable } from "../client.ts";
 import { projects } from "../schema/index.ts";
 import { insertProject } from "./insert-project.ts";
 import { lockForLimit } from "./limit-lock.ts";
@@ -14,7 +14,7 @@ export type { Project } from "./project-type.ts";
 // Names are unique per owner, so name alone is a total order; id is a harmless tie-break.
 // see PITFALLS.md: List order must not depend on the collation
 export function listAccessibleProjects(db: Database, userId: string): Promise<Project[]> {
-  return db
+  return toDrizzle(db)
     .select()
     .from(projects)
     .where(accessibleProjects(userId))
@@ -27,7 +27,7 @@ export async function findAccessibleProject(
   userId: string,
   projectId: string,
 ): Promise<Project | undefined> {
-  const [project] = await db
+  const [project] = await toDrizzle(db)
     .select()
     .from(projects)
     .where(and(accessibleProjects(userId), eq(projects.id, projectId)));
@@ -35,7 +35,7 @@ export async function findAccessibleProject(
 }
 
 export function countAccessibleProjects(db: Queryable, userId: string): Promise<number> {
-  return db.$count(projects, accessibleProjects(userId));
+  return toDrizzle(db).$count(projects, accessibleProjects(userId));
 }
 
 // Checks access itself, so it is safe even if a caller skips findAccessibleProject.
@@ -46,7 +46,7 @@ export async function renameProject(
   projectId: string,
   name: string,
 ): Promise<Project | undefined> {
-  const [project] = await db
+  const [project] = await toDrizzle(db)
     .update(projects)
     .set({ name })
     .where(and(accessibleProjects(userId), eq(projects.id, projectId)))
@@ -60,7 +60,7 @@ export async function deleteProject(
   userId: string,
   projectId: string,
 ): Promise<boolean> {
-  const deleted = await db
+  const deleted = await toDrizzle(db)
     .delete(projects)
     .where(and(accessibleProjects(userId), eq(projects.id, projectId)))
     .returning({ id: projects.id });
@@ -80,7 +80,7 @@ export function insertProjectWithinLimit(
   name: string,
   limit: number,
 ): Promise<InsertWithinLimitResult> {
-  return db.transaction(async (tx) => {
+  return toDrizzle(db).transaction(async (tx) => {
     await lockForLimit(tx, "projects", userId);
     if ((await countAccessibleProjects(tx, userId)) >= limit) return { status: "limit_reached" };
     return { status: "created", project: await insertProject(tx, userId, name) };

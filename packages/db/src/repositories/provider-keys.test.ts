@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type DbConnection } from "../client.ts";
 import { providerKeys, users } from "../schema/index.ts";
-import { createTestDatabase } from "../testing/index.ts";
+import { createTestDatabase, toDrizzle } from "../testing/index.ts";
 import { insertProject } from "./insert-project.ts";
 import {
   deleteProviderKey,
@@ -14,6 +14,7 @@ import {
 
 let connection: DbConnection;
 const db = () => connection.db;
+const drizzleDb = () => toDrizzle(connection.db);
 
 beforeAll(async () => {
   connection = createDb(await createTestDatabase());
@@ -22,7 +23,7 @@ beforeAll(async () => {
 afterAll(() => connection.close());
 
 async function insertProjectForNewUser(): Promise<string> {
-  const [user] = await db()
+  const [user] = await drizzleDb()
     .insert(users)
     .values({ name: "Test", email: `${randomUUID()}@example.com` })
     .returning();
@@ -37,7 +38,10 @@ const encrypted = (): EncryptedKeyColumns => ({
 });
 
 const rowOf = async (projectId: string) => {
-  const rows = await db().select().from(providerKeys).where(eq(providerKeys.projectId, projectId));
+  const rows = await drizzleDb()
+    .select()
+    .from(providerKeys)
+    .where(eq(providerKeys.projectId, projectId));
   return rows;
 };
 

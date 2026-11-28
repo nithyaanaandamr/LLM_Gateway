@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { Database } from "../client.ts";
+import { toDrizzle, type Database } from "../client.ts";
 import { PROVIDERS, providerKeys } from "../schema/index.ts";
 
 export type Provider = (typeof PROVIDERS)[number];
@@ -41,7 +41,7 @@ export async function upsertProviderKey(
   { projectId, provider, encrypted, lastFour }: UpsertProviderKeyInput,
 ): Promise<ProviderKeySummary> {
   const columns = { provider, lastFour, ...encrypted };
-  const [summary] = await db
+  const [summary] = await toDrizzle(db)
     .insert(providerKeys)
     .values({ projectId, ...columns })
     .onConflictDoUpdate({ target: providerKeys.projectId, set: columns })
@@ -54,7 +54,7 @@ export async function findProviderKeySummary(
   db: Database,
   projectId: string,
 ): Promise<ProviderKeySummary | undefined> {
-  const [summary] = await db
+  const [summary] = await toDrizzle(db)
     .select(SUMMARY_COLUMNS)
     .from(providerKeys)
     .where(eq(providerKeys.projectId, projectId));
@@ -63,7 +63,7 @@ export async function findProviderKeySummary(
 
 // True if a row was deleted; false if the project had no key
 export async function deleteProviderKey(db: Database, projectId: string): Promise<boolean> {
-  const deleted = await db
+  const deleted = await toDrizzle(db)
     .delete(providerKeys)
     .where(eq(providerKeys.projectId, projectId))
     .returning({ id: providerKeys.id });

@@ -1,4 +1,5 @@
 import { createDb, sessions, users, type DbConnection } from "@gw/db";
+import { toDrizzle } from "@gw/db/testing";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp, type App } from "../app.ts";
@@ -42,7 +43,7 @@ describe("auth routes", () => {
   });
 
   function userRows(email: string) {
-    return connection.db.select().from(users).where(eq(users.email, email));
+    return toDrizzle(connection.db).select().from(users).where(eq(users.email, email));
   }
 
   async function signedUp(): Promise<{ email: string; cookie: string }> {
@@ -264,7 +265,7 @@ describe("auth routes", () => {
       const { email, cookie } = await signedUp();
       const [user] = await userRows(email);
       expect(
-        await connection.db
+        await toDrizzle(connection.db)
           .select()
           .from(sessions)
           .where(eq(sessions.userId, user?.id ?? "")),
@@ -276,7 +277,7 @@ describe("auth routes", () => {
       expect(res.json()).toEqual({ success: true });
       expect(String(res.headers["set-cookie"])).toMatch(/Max-Age=0/i);
       expect(
-        await connection.db
+        await toDrizzle(connection.db)
           .select()
           .from(sessions)
           .where(eq(sessions.userId, user?.id ?? "")),

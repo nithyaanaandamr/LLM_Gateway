@@ -467,3 +467,7 @@ The project scope must stop a route that has no `:projectId`. Throwing from an `
 ## Prettier reads .prettierignore from the current folder
 
 Prettier looks for `.prettierignore` only in the folder it runs in. Run from a package folder (`cd apps/admin-api && prettier --write README.md`), it doesn't see the root file and reformats hand-formatted Markdown (see Prettier skips Markdown). Run `pnpm format` from the repo root. Found in GW-021: a README's tables were rewritten.
+
+## Source maps need the flag and the .map files
+
+Stack traces show `.ts` lines only if Node runs with `--enable-source-maps` (in `start`, the node part of `dev`, and `migrate`) and the `.js.map` files sit next to the built `.js`. Lose either and traces silently point at `dist/*.js`. `apps/admin-api/src/source-maps.test.ts` fails if either goes missing. Gotcha: `tsc -b` skips files it thinks are up to date, so after deleting only `.map` files, delete `dist/` to get them back.

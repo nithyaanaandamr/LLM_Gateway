@@ -21,7 +21,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    # BullMQ requires noeviction (see PITFALLS.md: BullMQ needs noeviction)
+    # BullMQ requires noeviction (see PITFALLS.md: BullMQ needs `maxmemory-policy noeviction`)
     command: ["redis-server", "--maxmemory-policy", "noeviction"]
     ports:
       - "127.0.0.1:6379:6379"

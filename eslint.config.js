@@ -13,7 +13,7 @@ export default defineConfig(
     "**/test-results/",
   ]),
   js.configs.recommended,
-  // Type-aware rules, e.g. no floating promises (see PITFALLS.md: type-aware lint)
+  // Type-aware rules, e.g. no floating promises (see PITFALLS.md: Type-aware lint)
   tseslint.configs.recommendedTypeChecked,
   {
     languageOptions: {

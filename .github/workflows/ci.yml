@@ -53,6 +53,8 @@ jobs:
           fi
 
       - run: pnpm format:check
+      # Repo-wide checks (boundary lint, PITFALLS pointers) must see every PR, even docs-only ones
+      - run: pnpm --filter @gw/repo-checks test
       - run: pnpm ${{ steps.scope.outputs.filter }} lint
       - run: pnpm ${{ steps.scope.outputs.filter }} typecheck
       - run: pnpm ${{ steps.scope.outputs.filter }} test

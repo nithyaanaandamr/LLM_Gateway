@@ -1,6 +1,6 @@
 # Pitfalls
 
-Deeper notes on gotchas, edge cases and trade-offs. Code comments point here (e.g. `// see PITFALLS.md: budget cap race`).
+Deeper notes on gotchas, edge cases and trade-offs. Code comments point here (e.g. `// see PITFALLS.md: Budget cap race`).
 Add new entries; don't rewrite old ones.
 
 ---
@@ -482,4 +482,20 @@ A test that asserts a response body does **not** contain some text fails by chan
 
 ## Apps get an opaque Database
 
-Apps get a `Database` handle with no query methods, so `db.select(...)` in app code is a type error (decision 3D in [ADR 0014](docs/decisions/0014-code-layers-and-boundary-lint.md)). Every query then goes through the repository functions in `@gw/db`. The handle is type-only: at runtime it is the same Drizzle object, so nothing changes in behaviour. Repositories unwrap it with `toDrizzle`; tests unwrap it with `toDrizzle` from `@gw/db/testing`; `@gw/auth` uses `@gw/db/drizzle` (lint bans that entry in apps from GW-042). The escape hatch is a deliberate cast (`db as unknown as ...`). GW-042 will ban the two unwrap entries (`@gw/db/drizzle`, `@gw/db/testing`) in apps; a hand-written cast (`db as unknown as ...`) is review only. `database-handle.test.ts` fails `pnpm typecheck` if `Database` gains any Drizzle query method (`select`, `query`, `execute`, `transaction`, `insert`, `update`, `delete`, `$count`, `with`, `$client`).
+Apps get a `Database` handle with no query methods, so `db.select(...)` in app code is a type error (decision 3D in [ADR 0014](docs/decisions/0014-code-layers-and-boundary-lint.md)). Every query then goes through the repository functions in `@gw/db`. The handle is type-only: at runtime it is the same Drizzle object, so nothing changes in behaviour. Repositories unwrap it with `toDrizzle`; tests unwrap it with `toDrizzle` from `@gw/db/testing`; `@gw/auth` uses `@gw/db/drizzle` (lint bans that entry in apps). The escape hatch is a deliberate cast (`db as unknown as ...`). ESLint (GW-042) bans the two unwrap entries (`@gw/db/drizzle`, `@gw/db/testing`) in apps; a hand-written cast (`db as unknown as ...`) is review only. `database-handle.test.ts` fails `pnpm typecheck` if `Database` gains any Drizzle query method (`select`, `query`, `execute`, `transaction`, `insert`, `update`, `delete`, `$count`, `with`, `$client`).
+
+## ESLint blocks replace rule options
+
+In `eslint.config.js`, when several blocks match one file and set the same rule, the last block's options replace the earlier ones. They are not merged. So every `no-restricted-imports` block lists all the groups its files need, and blocks go from general to specific. A short block placed late silently drops the groups of the longer one before it. `tools/repo-checks/src/boundary-blocks.ts` lists every block with every group and one example import each, and `boundaries.test.ts` runs them all, so a dropped group (or a group missing from the table) fails a test.
+
+## import-x skips .ts files by default
+
+`eslint-plugin-import-x` only follows files whose extension is in its `import-x/extensions` setting, and the default is `.js`. With only a resolver set, `import-x/no-cycle` reports nothing on a TypeScript cycle and still looks happy. The config sets `"import-x/extensions": [".ts", ".tsx", ".js"]`; the cycle test in `tools/repo-checks` fails if that line is removed. `no-cycle` ignores `import type` on purpose (runtime cycles only, decision 4A in ADR 0014).
+
+## Bare Node built-ins bypass node: bans
+
+`import "fs"` and `import "node:fs"` load the same module, but a ban written for `node:*` only matches the second. `eslint-plugin-import-x` 4.18.1 has no `enforce-node-protocol-usage` rule to force the prefix, so the `NODE` and `CRYPTO_IN_REPO` groups in `eslint.config.js` also list the bare names (and `name/*` subpaths). The list is hand-written: a built-in missing from it (or a new one) is not caught. If a rule that forces `node:` ever ships, use it and drop the list.
+
+## Slow first lint in tests
+
+The `tools/repo-checks` tests lint with the whole root config, and the first case loads ESLint and every plugin. On a cold CI runner that can pass vitest's 5 s default, so `tools/repo-checks/vitest.config.ts` sets `testTimeout` and `hookTimeout` to 30 s. A timeout there means a slow runner, not a broken rule.

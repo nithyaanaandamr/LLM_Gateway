@@ -2,7 +2,8 @@
 const PREFIX = "PITFALLS.md: ";
 const SEPARATOR = /^(, |; | and )/;
 const SPACED_END = /^\s+[|)]/; // table cell: "heading |"
-const END_CHARS = ")|.,;:`*\"']";
+const END_CHARS = ")|.:`*\"'!?]"; // a pointer may stop at these
+const MAX_TYPO_WORDS = 5;
 
 export interface BrokenPointer {
   file: string;
@@ -19,19 +20,33 @@ export function readHeadings(pitfalls: string): string[] {
   return headings.sort((a, b) => b.length - a.length);
 }
 
-/** True if `text` is one or more headings joined by `, ` / `; ` / ` and `, then an end. */
+/**
+ * After `, ` or `; `, text that is not a heading but is shaped like one (starts with a capital,
+ * a few words, no further comma, not another pointer) is read as a typo in a second heading.
+ * Prose such as ", Because it is cheap." is flagged too: limitation of this simple rule.
+ * Lowercase typos and typos after " and " pass (too much prose starts that way).
+ */
+function looksLikeHeading(text: string): boolean {
+  if (text.includes("PITFALLS.md")) return false;
+  const phrase = text.split(/[)|]|\.(?:\s|$)/)[0] ?? "";
+  if (/[,;]/.test(phrase) || !/^[A-Z]/.test(phrase)) return false;
+  return phrase.trim().split(/\s+/).length <= MAX_TYPO_WORDS;
+}
+
+/** True if `text` starts with a heading and then ends the pointer or continues with another. */
 function namesRealHeadings(text: string, headings: string[]): boolean {
   const heading = headings.find((h) => text.startsWith(h));
   if (heading === undefined) return false;
   const rest = text.slice(heading.length);
-  if (rest === "" || END_CHARS.includes(rest[0] ?? "") || SPACED_END.test(rest)) return true;
+  if (rest.trim() === "" || SPACED_END.test(rest) || END_CHARS.includes(rest[0] ?? "")) return true;
   const separator = SEPARATOR.exec(rest);
-  if (separator === null) return false;
-  // Not another heading after the separator (e.g. "A, then ..."): the pointer ended at the comma.
-  return (
-    namesRealHeadings(rest.slice(separator[0].length), headings) ||
-    END_CHARS.includes(rest[0] ?? "")
-  );
+  if (separator !== null) {
+    const next = rest.slice(separator[0].length);
+    if (headings.some((h) => next.startsWith(h))) return namesRealHeadings(next, headings);
+    // Prose follows, except a heading-shaped phrase after a comma or semicolon
+    return separator[0] === " and " || !looksLikeHeading(next);
+  }
+  return rest[0] === "," || rest[0] === ";"; // "heading," then a line break or no space
 }
 
 /** Pointers in one file's text that name no real heading. `<...>` placeholders are skipped. */

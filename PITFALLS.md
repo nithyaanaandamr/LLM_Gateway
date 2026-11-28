@@ -475,3 +475,7 @@ Stack traces show `.ts` lines only if Node runs with `--enable-source-maps` (in 
 ## Negative text checks and random IDs
 
 A test that asserts a response body does **not** contain some text fails by chance if the body also holds a random value that can contain it. Every error body has a random `requestId` (a UUID: hex digits and hyphens, at most 12 characters between hyphens). `not.toContain("aaaa")` failed about 1 run in 3,300; checking for 13 `a`s in a row can never match a UUID. Pick negative texts a random ID can't contain: longer than 12 characters, or with non-hex letters.
+
+## Config readers take env as an argument
+
+`readDatabaseUrl(env)` used to default to `process.env`; now `env` is required. Rule R11 (see docs/architecture/code-structure.md): only entry-point files (`main.ts`, `*-cli.ts`) read `process.env`, and everything else gets `env` passed in. That also lets tests pass a plain object instead of changing the real environment. The cost: a caller outside this repo that calls `readDatabaseUrl()` now gets a TypeScript error, or a `TypeError` on `undefined.DATABASE_URL` in untyped JavaScript. Pass `process.env` from the entry point.

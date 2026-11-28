@@ -4,7 +4,7 @@ How the code is split into layers, who may import whom, and where new code goes.
 
 ## 1. Purpose and terms
 
-The rules are simple: each file has one job, and it may only use the layers below it. This page writes them down so a newcomer (or an agent) does not have to guess.
+The rules are simple: each file has one job, and it may only use the layers below it. This page writes them down so a newcomer (or an agent) does not have to guess. Code is cited by file and symbol name, never by line number, because line numbers drift.
 
 - **Layer:** a group of files with one job, which may only use layers below it.
 - **Boundary:** the line between two layers, or between two packages.
@@ -31,7 +31,7 @@ apps/admin-api ──► @gw/auth ──► @gw/db ──► (drizzle-orm, pg)
 
 apps/gateway, apps/worker, apps/dashboard   empty: src/index.ts is `export {}`
 tools/board-bot, tools/fake-provider        no workspace imports (fake-provider is empty)
-@gw/shared main entry                        empty `export {}` (packages/shared/src/index.ts:2)
+@gw/shared main entry                        empty `export {}` (`packages/shared/src/index.ts`)
 ```
 
 Target direction, including the planned apps (arrow means "may import"):
@@ -63,7 +63,7 @@ Package entry points today:
 
 | Package | `exports` | What the main entry gives |
 |---|---|---|
-| `@gw/db` | `.`, `./testing` | `createDb`, `Database` type, `runMigrations`, `readDatabaseUrl`, `isUniqueViolation`, the repository functions, all app and auth tables, and a `schema` namespace (packages/db/src/index.ts:1-9). Not exported: `logs.ts` (schema/index.ts:1), `lockForLimit` and `accessibleProjects` (internal files). |
+| `@gw/db` | `.`, `./testing` | `createDb`, `Database` type, `runMigrations`, `readDatabaseUrl`, `isUniqueViolation`, the repository functions, all app and auth tables, and a `schema` namespace (`packages/db/src/index.ts`). Not exported: `logs.ts` (`schema/index.ts` leaves it out), `lockForLimit` and `accessibleProjects` (internal files). |
 | `@gw/auth` | `.` | `createAuth`, `tableOptions`, `CLIENT_IP_HEADER`, `fromNodeHeaders`, types (packages/auth/src/index.ts). Imports only the `Database` type from `@gw/db`; no HTTP code. |
 | `@gw/shared` | `.`, `./crypto` | Main: nothing yet. `./crypto`: master key, provider key encrypt/decrypt, gateway key helpers. |
 
@@ -88,9 +88,9 @@ No app imports another app, and no package imports an app. `tsc -b` refuses circ
 
 | Layer | Job | May import | Must not import | Talks to neighbours by |
 |---|---|---|---|---|
-| Startup | read config once, build dependencies, register plugins, shut down | everything in its app; `@gw/*` main entries | testing helpers | passes `db`, `auth`, `masterKey` as plugin options (app.ts:31-42) |
+| Startup | read config once, build dependencies, register plugins, shut down | everything in its app; `@gw/*` main entries | testing helpers | passes `db`, `auth`, `masterKey` as plugin options (`app.ts` `buildApp`) |
 | HTTP: scopes, hooks | access checks for a group of routes | HTTP helpers, repositories, `@gw/auth` | services of other features | throw `AppError`; set `request.project` / `request.auth` |
-| HTTP: routes, schemas | parse input (Zod), call a repository or service, shape the response | own feature's schemas and service, HTTP helpers, repositories, `@gw/shared` | `drizzle-orm`, tables, `process.env`, another app | call functions; throw `AppError` with a safe message |
+| HTTP: routes, schemas | parse input (Zod), call a repository or service, shape the response | own feature's schemas, limits and service, HTTP helpers, repositories, `@gw/shared` | `drizzle-orm`, tables, `process.env`, another app | call functions; throw `AppError` with a safe message |
 | Service | logic that uses another package besides `@gw/db`, or needs 2+ repository calls | repositories, `@gw/shared` (+crypto), own feature's limits file, `errors.ts` | `fastify`, request/reply objects, `drizzle-orm`, schemas files (Zod types) | plain arguments in, plain value out; may throw `AppError` |
 | Repository (`@gw/db`) | one query or one transaction | schema, `drizzle-orm`, `pg` | apps, crypto | returns rows, `undefined`/`false`, or a result union; throws on unexpected DB errors |
 | Schema (`@gw/db`) | table definitions | `drizzle-orm` | repositories, apps | n/a |
@@ -103,7 +103,8 @@ How `admin-api` files map to layers:
 | `protected-api.ts`, `projects/project-scoped-api.ts`, `projects/project-scope.ts` | HTTP: scopes |
 | `auth/require-session.ts`, `auth/require-trusted-origin.ts`, `projects/require-project.ts` | HTTP: hooks |
 | `*/*-routes.ts` (except `auth/auth-routes.ts`, listed under the bridge), `routes/health-routes.ts`, `routes/me-routes.ts` | HTTP: routes |
-| `*/*-schemas.ts` | HTTP: schemas (Zod shapes, `toXResponse` mappers, limits) |
+| `*/*-schemas.ts` | HTTP: schemas (Zod shapes, `toXResponse` mappers, input bounds such as `MAX_KEY_LENGTH`) |
+| `*/*-limits.ts` | Count caps (plain constants: how many things a user may have); routes and services import them |
 | `auth/get-auth-user.ts`, `projects/get-project.ts`, `projects/project-not-found.ts`, `projects/name-conflict.ts` | HTTP: helpers |
 | `errors.ts`, `error-handler.ts`, `log-error.ts` | HTTP: errors |
 | `auth/create-app-auth.ts`, `auth/auth-routes.ts`, `auth/to-web-request.ts`, `auth/send-web-response.ts`, `auth/auth-error.ts`, `auth/trusted-origins.ts` | HTTP: bridge to Better Auth |
@@ -111,16 +112,16 @@ How `admin-api` files map to layers:
 
 ## 4. How errors cross layers
 
-1. Package code throws its own named errors (`InvalidMasterKeyError`); the app maps them where it calls (config.ts:73).
-2. Repositories return expected outcomes as values, never exceptions (`{ status: "limit_reached" }`, `false` for "nothing deleted"; gateway-keys.ts:72-73). A Postgres error is thrown as is; the app asks `@gw/db` what it is (`isProjectNameTaken(error)`) and never reads Postgres codes itself.
-3. Services and routes throw `AppError(status, code, message)`; the message must be safe to show (issue-gateway-key.ts:26-31). Services may throw `AppError` because they serve only this app's HTTP layer. A worker service would throw its own errors.
-4. Anything else becomes a 500. The error handler logs it through `errorForLog`, which drops SQL and params (error-handler.ts:13, log-error.ts:1-3; see PITFALLS.md: Database errors carry query params).
+1. Package code throws its own named errors (`InvalidMasterKeyError`); the app maps them where it calls (`config.ts` `masterKeySchema`).
+2. Repositories return expected outcomes as values, never exceptions (`{ status: "limit_reached" }`, `false` for "nothing revoked"; `insertGatewayKeyWithinLimit` and `revokeGatewayKey` in `repositories/gateway-keys.ts`). A Postgres error is thrown as is; the app asks `@gw/db` what it is (`isProjectNameTaken(error)`) and never reads Postgres codes itself.
+3. Services and routes throw `AppError(status, code, message)`; the message must be safe to show (`issue-gateway-key.ts` `issueGatewayKey`). Services may throw `AppError` because they serve only this app's HTTP layer. A worker service would throw its own errors.
+4. Anything else becomes a 500. The error handler logs it through `errorForLog`, which drops SQL and params (`error-handler.ts` `errorHandler`, `log-error.ts` `errorForLog`; see PITFALLS.md: Database errors carry query params).
 
 ## 5. Dependencies and config
 
-- Dependencies are passed in, never imported as singletons. `app.ts:31-42` builds `db` and `auth` once; `config.ts` parses `masterKey` and `app.ts` passes all three on as plugin options; each route plugin declares what it needs (`GatewayKeyRoutesOptions { db }`, gateway-key-routes.ts:14-16).
-- Config is read once: `loadConfig(process.env)` runs only in `main.ts:8` (and in the test fixture). No other admin-api runtime file reads `process.env`.
-- Repositories never encrypt; services do (packages/db/README.md, store-provider-key.ts:26-32).
+- Dependencies are passed in, never imported as singletons. `app.ts` `buildApp` builds `db` and `auth` once; `config.ts` parses `masterKey` and `app.ts` passes all three on as plugin options; each route plugin declares what it needs (`GatewayKeyRoutesOptions { db }` in `gateway-key-routes.ts`).
+- Config is read once: `loadConfig(process.env)` runs only in `main.ts` `readConfigOrExit` (and in the test fixture). No other admin-api runtime file reads `process.env`.
+- Repositories never encrypt; services do (packages/db/README.md; `store-provider-key.ts` `storeProviderKey`).
 
 ## 6. Route, service, repository
 
@@ -132,7 +133,7 @@ Check against today's code:
 |---|---|
 | `issueGatewayKey` (service) | uses crypto |
 | `storeProviderKey` (service) | encrypts |
-| `createProjectFor` (private function in project-collection-routes.ts:24-32) | one repository call plus 409 mapping, so it stays in the route file |
+| `createProjectFor` (private function in `project-collection-routes.ts`) | one repository call plus 409 mapping, so it stays in the route file |
 | list, revoke, rename, delete | direct repository calls |
 
 ## 7. Planned apps
@@ -152,7 +153,7 @@ Check against today's code:
 
 ## 9. Naming and file placement
 
-- One feature folder per resource: `projects/`, `gateway-keys/`, `provider-keys/`. Inside: `<feature>-routes.ts`, `<feature>-schemas.ts`, limits as `<feature>-limits.ts` (plain constants a service and a schema can both import), services as `<verb>-<noun>.ts` (`issue-gateway-key.ts`), hooks as `require-<thing>.ts`, request readers as `get-<thing>.ts`.
+- One feature folder per resource: `projects/`, `gateway-keys/`, `provider-keys/`. Inside: `<feature>-routes.ts`, `<feature>-schemas.ts`, count caps (a number of things a user may have, such as `MAX_PROJECTS_PER_USER`) as `<feature>-limits.ts` (plain constants a service and a route can both import); input bounds on a body (such as `MAX_KEY_LENGTH`) stay in `<feature>-schemas.ts`, services as `<verb>-<noun>.ts` (`issue-gateway-key.ts`), hooks as `require-<thing>.ts`, request readers as `get-<thing>.ts`.
 - Repository functions are named after their table (`listGatewayKeys`), as packages/db/README.md says.
 - Imports use explicit `.ts` paths and no path aliases (the lint rules match import text; see section 11).
 
@@ -189,7 +190,7 @@ The "Enforced by" column names what checks the rule today, or the task that adds
 | R8 | `@gw/shared` main entry stays browser-safe; the dashboard imports only `@gw/shared` main (never `@gw/db`, `@gw/auth`, `@gw/shared/crypto` or `node:*`) | GW-042 lint |
 | R9 | No import cycles (runtime imports only) | GW-042 lint (`import-x/no-cycle`); true today |
 | R10 | Gateway and worker never import `@gw/auth`; worker never imports `fastify` | GW-042 lint |
-| R11 | Only startup reads `process.env`, in runtime code (tests, fixtures and test helpers may read it) | GW-042 lint (`main.ts` allowed); true today: `@gw/db` functions take `env` as an argument, and only `main.ts` and `migrate-cli.ts` pass `process.env` |
+| R11 | Only entry-point files read `process.env`: `main.ts` files and `*-cli.ts` files (today `apps/admin-api/src/main.ts`, `packages/db/src/migrate-cli.ts`, `tools/board-bot/src/main.ts`). Every other runtime file takes `env` as an argument (tests, fixtures and test helpers may read it) | GW-042 lint (`main.ts` and `*-cli.ts` allowed); true today (checked by grep); see PITFALLS.md: Config readers take env as an argument |
 | R12 | Log tables only through the LogStore | `packages/db/src/index.ts` does not re-export `logs.ts` |
 | R13 | Route, service, repository rule (section 6) | review |
 | R14 | Hot path does only lookup, limits, forward, stream; the gateway never writes Postgres directly, computes rollups or sends emails | review; the gateway README states it (see section 7) |
@@ -209,7 +210,7 @@ The "Enforced by" column names what checks the rule today, or the task that adds
 | G2 | Prettier cannot reformat Markdown from any folder | GW-042 (R15) |
 | G3 | Each README states its layer, what it may import and what it must not | done in GW-041 |
 | G4 | `CLAUDE.md` links this page | done in GW-041 |
-| G5 | `process.env` is read only in startup files | GW-042 (R11) |
+| G5 | `process.env` is read only in entry-point files (`main.ts`, `*-cli.ts`) | GW-042 (R11) |
 | G6 | A test checks each workspace dependency in a `package.json` has a matching `tsconfig.build.json` reference | Phase 2, GW-046 |
 
 Tests that already exist: `route-inventory.test.ts`, `project-ownership.test.ts`, `owner-access-rule.test.ts` (section 8).

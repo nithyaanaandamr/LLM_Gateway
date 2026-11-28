@@ -34,7 +34,7 @@ Full spec: [code-structure.md](../architecture/code-structure.md).
 
 | Option | Pros | Cons |
 |---|---|---|
-| A. Runtime imports only | Type-only cycles vanish at runtime; no code change | A type-only cycle (one exists in `packages/db`) is not reported |
+| A. Runtime imports only | Type-only cycles vanish at runtime; no code change | Type-only cycles are not reported (the one existing cycle, in `packages/db`, is removed in GW-041) |
 | B. Type-only too | Stricter | Needs dependency-cruiser and moving the `Project` type |
 
 **(d) Closing the `db` loophole**
@@ -52,7 +52,7 @@ Full spec: [code-structure.md](../architecture/code-structure.md).
 2. **Lint tool (b):** A. Core `no-restricted-imports` plus `eslint-plugin-import-x` (`no-cycle`, `no-relative-packages`). GW-042 adds the rules, each proved by one deliberately bad import.
 3. **Database handle (d):** D. `@gw/db` gives apps an opaque `Database` type with no query methods. Repository functions unwrap it inside `@gw/db`; tests unwrap it through `@gw/db/testing`; `@gw/auth` gets the real client through an export that lint bans in apps. Built by GW-045. The `drizzle-orm`/`pg` import ban stays as well.
 4. **Cycles (c):** A. Runtime cycles only. The one type-only cycle in `@gw/db` is removed in GW-041.
-5. **Naming inconsistencies:** fix them in GW-041 so the rules have no named exceptions (owner overruled the first choice, 2026-11-28). No behaviour change.
+5. **Naming inconsistencies:** fix them in GW-041 so the rules have no named exceptions (owner overruled the first choice, 2026-11-28). No runtime behaviour change; one signature change: `readDatabaseUrl` now requires its `env` argument.
 
 ## Consequences
 
@@ -60,4 +60,4 @@ Full spec: [code-structure.md](../architecture/code-structure.md).
 - `import-x` can find nothing if its parser and resolver settings are wrong, so keep a `no-cycle` case in the bad-import tests.
 - The opaque handle makes app queries a compile error. Tests and `@gw/auth` unwrap it on purpose, and lint keeps apps away from those exports.
 - The gateway's "no direct Postgres writes" rule cannot be linted with a single `@gw/db` entry point; it stays a review rule until Phase 2 decides on a read-only export.
-- The type-only cycle in `packages/db` is left as is.
+- `readDatabaseUrl(env)` no longer defaults to `process.env`, so only entry-point files read it (R11). A caller outside the repo that calls `readDatabaseUrl()` now gets a TypeScript error. See PITFALLS.md: Config readers take env as an argument.

@@ -8,9 +8,9 @@ import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";
 import { getAuthUser } from "../auth/get-auth-user.ts";
 import { AppError } from "../errors.ts";
 import { nameConflictOrRethrow } from "./name-conflict.ts";
+import { MAX_PROJECTS_PER_USER } from "./project-limits.ts";
 import {
   projectNameBody,
-  MAX_PROJECTS_PER_USER,
   projectListResponse,
   projectResponse,
   toProjectResponse,

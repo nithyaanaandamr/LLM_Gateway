@@ -1,6 +1,4 @@
-// One row per rule: a file path (relative to the repo root) and code that must fail.
-// Rule ids: NRI = no-restricted-imports, NRP = import-x/no-relative-packages,
-// NRPROP = no-restricted-properties.
+// Hand-written cases per rule; groups of every block are covered in boundary-blocks.ts.
 export const NRI = "no-restricted-imports";
 export const NRP = "import-x/no-relative-packages";
 export const NRPROP = "no-restricted-properties";
@@ -221,6 +219,24 @@ export const BAD_CASES: BadCase[] = [
 ];
 
 export const OK_CASES: OkCase[] = [
+  {
+    name: "dashboard config imports node:path",
+    file: "apps/dashboard/vite.config.ts",
+    code: `import "node:path";`,
+  },
+  {
+    name: "dashboard test imports node:path",
+    file: "apps/dashboard/src/x.test.ts",
+    code: `import "node:path";`,
+  },
+  {
+    name: "dashboard imports @gw/shared main",
+    file: "apps/dashboard/src/x.ts",
+    code: `import "@gw/shared";`,
+  },
+  { name: "admin-api imports fastify", file: A, code: `import "fastify";` },
+  { name: "gateway imports fastify", file: "apps/gateway/src/x.ts", code: `import "fastify";` },
+  { name: "worker imports @gw/db", file: "apps/worker/src/x.ts", code: `import "@gw/db";` },
   {
     name: "main.ts reads process.env",
     file: "apps/admin-api/src/main.ts",

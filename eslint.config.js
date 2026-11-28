@@ -8,7 +8,14 @@ import tseslint from "typescript-eslint";
 // Boundary rules: docs/architecture/code-structure.md section 11.
 // Each group matches the import text and carries the message a newcomer sees.
 const OTHER_APPS = {
-  group: ["@gw/admin-api", "@gw/gateway", "@gw/worker", "@gw/dashboard", "@gw/board-bot"],
+  group: [
+    "@gw/admin-api",
+    "@gw/gateway",
+    "@gw/worker",
+    "@gw/dashboard",
+    "@gw/board-bot",
+    "@gw/repo-checks",
+  ],
   message: "Apps never import other apps or tools. Move shared code to a package in packages/.",
 };
 const FAKE_PROVIDER = {
@@ -119,11 +126,11 @@ export default defineConfig(
     },
   },
 
-  // R1, R10, R8: apps (tests too, for the @gw/db/drizzle ban)
+  // R1, R10: apps (tests too, for the @gw/db/drizzle ban). The dashboard's Node and package
+  // bans (R8) are runtime-only below, so vite/playwright configs and tests may use Node.
   boundaryBlock(["apps/**"], [OTHER_APPS, DB_DRIZZLE]),
   boundaryBlock(["apps/gateway/**"], [OTHER_APPS, DB_DRIZZLE, AUTH]),
   boundaryBlock(["apps/worker/**"], [OTHER_APPS, DB_DRIZZLE, AUTH, FASTIFY]),
-  boundaryBlock(["apps/dashboard/**"], [OTHER_APPS, NODE, DASHBOARD_PACKAGES]),
   // R5, R7: app runtime code
   boundaryBlock(["apps/*/src/**"], APP_RUNTIME, TEST_FILES),
   boundaryBlock(["apps/gateway/src/**"], [...APP_RUNTIME, AUTH], TEST_FILES),

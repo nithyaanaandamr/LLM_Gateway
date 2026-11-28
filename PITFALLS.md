@@ -486,7 +486,7 @@ Apps get a `Database` handle with no query methods, so `db.select(...)` in app c
 
 ## ESLint blocks replace rule options
 
-In `eslint.config.js`, when several blocks match one file and set the same rule, the last block's options replace the earlier ones. They are not merged. So every `no-restricted-imports` block lists all the groups its files need, and blocks go from general to specific. A short block placed late silently drops the groups of the longer one before it. `tools/repo-checks/src/boundaries.test.ts` has a case per group, so a dropped group fails a test.
+In `eslint.config.js`, when several blocks match one file and set the same rule, the last block's options replace the earlier ones. They are not merged. So every `no-restricted-imports` block lists all the groups its files need, and blocks go from general to specific. A short block placed late silently drops the groups of the longer one before it. `tools/repo-checks/src/boundary-blocks.ts` lists every block with every group and one example import each, and `boundaries.test.ts` runs them all, so a dropped group (or a group missing from the table) fails a test.
 
 ## import-x skips .ts files by default
 

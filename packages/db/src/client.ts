@@ -11,6 +11,7 @@ export type Transaction = Parameters<Parameters<DrizzleDatabase["transaction"]>[
 declare const databaseBrand: unique symbol;
 
 // What apps get: a handle with no query methods. Pass it to repository functions.
+// The brand exists only in types (the real object is the Drizzle client): a fake needs a cast.
 // see PITFALLS.md: Apps get an opaque Database
 export type Database = { readonly [databaseBrand]: true };
 

@@ -10,5 +10,11 @@ describe("Database handle", () => {
     expectTypeOf<Database>().not.toHaveProperty("query");
     expectTypeOf<Database>().not.toHaveProperty("execute");
     expectTypeOf<Database>().not.toHaveProperty("transaction");
+    expectTypeOf<Database>().not.toHaveProperty("insert");
+    expectTypeOf<Database>().not.toHaveProperty("update");
+    expectTypeOf<Database>().not.toHaveProperty("delete");
+    expectTypeOf<Database>().not.toHaveProperty("$count");
+    expectTypeOf<Database>().not.toHaveProperty("with");
+    expectTypeOf<Database>().not.toHaveProperty("$client");
   });
 });
